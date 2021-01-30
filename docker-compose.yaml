@@ -1,0 +1,109 @@
+version: "2.4"
+services:
+  plex:
+    image: jaymoulin/plex:1.16.5
+    container_name: plex
+    restart: always
+    hostname: raspberrypi
+    expose:
+      - 32400
+      - 33400
+    volumes:
+      - ${STORAGE}/Plex Media Server:/root/Library/Application Support/Plex Media Server
+      - ${STORAGE}/Media:/media
+      - ${STORAGE}/tmp:/tmp
+    networks:
+      lan:
+        ipv4_address: 192.168.1.110
+
+  transmission:
+    image : jaymoulin/transmission
+    container_name: transmission
+    restart: always
+    command: transmission-daemon -f -g /config
+    expose:
+      - 9091
+    ports:
+      - 9091:9091
+      - 51413:51413
+      - 51413:51413/udp
+    volumes:
+      - ./transmission:/config
+      - ${STORAGE}/Transmission:/downloads
+
+  flexget:
+    build: flexget-arm
+    container_name: flexget-arm
+    restart: always
+    environment:
+      - TORRENT_PLUGIN=transmission
+      - FG_WEBUI_PASSWD=${PASSWD}
+    links:
+      - transmission
+    ports:
+      - 5050:5050
+    volumes:
+      - ./flexget:/config
+      - ${STORAGE}/Transmission:/downloads
+      - ${STORAGE}/Media:/storage
+
+  pihole:
+    image: pihole/pihole:latest
+    container_name: pihole
+    restart: always
+    hostname: raspberrypi
+    environment:
+      - TZ=Europe/Madrid
+      - WEBPASSWORD=${PASSWD}
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "67:67/udp"
+      - "80:80/tcp"
+      - "443:443/tcp"
+    volumes:
+       - './pihole/etc-pihole/:/etc/pihole/'
+       - './pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/'
+    dns:
+      - 127.0.0.1
+      - 1.1.1.1
+    cap_add:
+      - NET_ADMIN
+
+  samba:
+    image: dperson/samba:rpi
+    container_name: samba
+    restart: always
+    command: '-u "username;password" -s "Drive;/Drive;yes;no"'
+    stdin_open: true
+    tty: true
+    ports:
+      - 139:139
+      - 445:445
+    volumes:
+      - /usr/share/zoneinfo/Europe/Madrid:/etc/localtime
+      - /mnt/storage:/Drive
+
+  portainer-ce:
+    image: portainer/portainer-ce
+    container_name: portainer
+    restart: always
+    expose:
+      - 8000
+      - 9002
+    ports:
+      - 8000:8000
+      - 9002:9000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer/data:/data
+
+networks:
+  lan:  # This option is only compatible for v.2 of docker-compose
+    driver: macvlan
+    driver_opts:
+      parent: eth0 # Your ethernet conexion
+    ipam:
+      config:
+        - subnet: "192.168.1.100/24" # Create you own subnet
+          gateway: "192.168.1.1" # Router IP

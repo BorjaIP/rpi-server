@@ -1,0 +1,76 @@
+web_server: yes
+
+schedules:
+  - tasks: '*'
+    interval:
+      minutes: 30
+
+templates:
+  tv:
+    series:
+      settings:
+        tv:
+          exact: yes
+          propers: 12 hours
+          quality: 1080p
+      tv:
+
+    transmission:
+      host: transmission
+      port: 9091
+      username: transmission_user
+      password: transmission_pass
+
+tasks:
+  eztvrss:
+    rss: https://rarbg.to/rss.php
+    template: tv
+    priority: 2
+  sort_tv:
+    priority: 2
+    no_entries_ok: yes
+    parsing:
+      series: guessit
+    filesystem:
+      path: /downloads/complete
+      regexp: '.*\.(avi|mkv|mp4)$'
+      recursive: yes
+    accept_all: yes
+    thetvdb_lookup: yes
+    require_field: series_name
+    all_series:
+      parse_only: yes
+    copy:
+      to: "/storage/Series/{{ tvdb_series_name }}/Season {{ series_season }}"
+      rename: "{{ tvdb_series_name }} - {{ series_id }}{{ location | pathext }}"
+  sort_movies:
+    priority: 2
+    no_entries_ok: yes
+    filesystem:
+      path: /downloads/complete
+      regexp: '.*\.(avi|mkv|mp4)$'
+      recursive: yes
+    accept_all: yes
+    require_field: movie_name
+    imdb_lookup: yes
+    copy:
+      to: "/storage/Movies/{{ movie_name }}"
+      rename: "{{ movie_name }} {{ location | pathext }}"
+  remove_stale_torrents:
+    from_transmission:
+      host: transmission
+      port: 9091
+      username: transmission_user
+      password: transmission_pass
+    disable: [seen, seen_info_hash]
+    if:
+      - transmission_progress == 100: accept
+      - not transmission_seed_ratio_ok: reject
+      - not transmission_idle_limit_ok: reject
+    transmission:
+      host: transmission
+      port: 9091
+      username: transmission_user
+      password: transmission_pass
+      action: purge
+
