@@ -101,7 +101,7 @@ export DOCKER_TMPDIR="/mnt/storage/docker-tmp"
 
 List all the devices.
 
-```bashh
+```bash
 sudo su
 fdisk -l
 ```
