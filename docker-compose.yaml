@@ -1,7 +1,7 @@
 version: "2.4"
 services:
   plex:
-    image: jaymoulin/plex:1.16.5
+    image: jaymoulin/plex:1.22.0.4163
     container_name: plex
     restart: always
     hostname: raspberrypi
@@ -46,11 +46,11 @@ services:
       - ./flexget:/config
       - ${STORAGE}/Transmission:/downloads
       - ${STORAGE}/Media:/storage
-
+  
   pihole:
-    image: pihole/pihole:latest
+    image: pihole/pihole:v5.7
     container_name: pihole
-    restart: always
+    restart: always 
     hostname: raspberrypi
     environment:
       - TZ=Europe/Madrid
@@ -74,7 +74,7 @@ services:
     image: dperson/samba:rpi
     container_name: samba
     restart: always
-    command: '-u "username;password" -s "Drive;/Drive;yes;no"'
+    command: '-u ${SAMBA_USER};${SAMBA_PASS} -s "Drive;/Drive;yes;no"'
     stdin_open: true
     tty: true
     ports:
@@ -85,7 +85,7 @@ services:
       - /mnt/storage:/Drive
 
   portainer-ce:
-    image: portainer/portainer-ce
+    image: portainer/portainer-ce:2.1.1
     container_name: portainer
     restart: always
     expose:
@@ -96,7 +96,7 @@ services:
       - 9002:9000
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./portainer/data:/data
+      - ./portainer/data:/data 
 
 networks:
   lan:  # This option is only compatible for v.2 of docker-compose
@@ -105,5 +105,5 @@ networks:
       parent: eth0 # Your ethernet conexion
     ipam:
       config:
-        - subnet: "192.168.1.100/24" # Create you own subnet
+        - subnet: "192.168.1.100/24" # Create you own subnet 
           gateway: "192.168.1.1" # Router IP
