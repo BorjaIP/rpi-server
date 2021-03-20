@@ -123,9 +123,12 @@ sudo reboot
 
 # Content
 
- * [Flex](https://github.com/jaymoulin/docker-plex)
+ * [Plex](https://github.com/jaymoulin/docker-plex)
  * [Flexget](https://github.com/Flexget/Flexget)
  * [Transmission](https://gitlab.com/jaymoulin/docker-transmission)
+ * [Pihole](https://github.com/pi-hole/docker-pi-hole)
+ * [Portainer](https://github.com/portainer/portainer)
+ * [Samba](https://github.com/dperson/samba)
 
 # Contributions
 
