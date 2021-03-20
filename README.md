@@ -1,20 +1,64 @@
 # Raspberry-Server
 
 ### 1. Download Raspbian
+
    * [Raspbian](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
    * [Etcher](https://etcher.io/)
    * Flash SD
   
 ### 2. Install all and configure the Raspberry
-   * Change pasword user Pi
-   * Activate [SSH](https://www.raspberrypi.org/documentation/remote-access/ssh/)
-   * Add public key to [raspi](https://linuxhandbook.com/add-ssh-public-key-to-server/)
-   * Add custom [user](https://www.lifewire.com/create-users-useradd-command-3572157) 
 
-Modify users and passwd
+> __NOTE__ : Activate [SSH](https://www.raspberrypi.org/documentation/remote-access/ssh/) in the Raspberry
+
+Create new user.
 ```bash
+sudo useradd username
+sudo passwd username
+su username
+```
+
+**[Optional]** Change **pi** and **root** password's.
+
+```bash
+sudo passwd pi
+sudo passwd root
+```
+
+Generate **SSH Key** on your computer to connect to the raspberry server.
+
+```bash
+ssh-keygen
+cat ~/.ssh/id_rsa.pub
+```
+
+Copy ssh **public** key in `.ssh/authorized_keys` in the raspberry server.
+
+```bash
+ssh username@server_ip
+# create .ssh folder if does not exists
+mkdir -p .ssh && touch .ssh/authorized_keys
+# copy public ip
+vim .ssh/authorized_keys
+# set the correct file permissions
+chmod 700 .ssh && chmod 600 .ssh/authorized_keys
+# change owner if its necessary
+chown -R username:username .ssh
+```
+
+or install `ssh-copy-id`
+
+```bash
+ssh-copy-id -i ~/.ssh/id_rsa.pub username@server_ip
+```
+
+**[Optional]** Add more security by allowing only your user to access via ssh and denying root access via ssh.
+
+```bash
+# gice sudo permissions to the created user
 sudo useradd username -G sudo
-# copy this inside sudo visudo
+# [Optional] edit sudo file for no password
+sudo visudo
+# [Optional] copy this inside 
 %sudo   ALL=(ALL:ALL) NOPASSWD:ALL
 # modify sshd_config for only access to your user
 echo "AllowUsers username" | sudo tee -a /etc/ssh/sshd_config
@@ -24,14 +68,16 @@ echo "PermitRootLogin no" | sudo tee -a /etc/ssh/sshd_config
 sudo systemctl enable ssh && sudo systemctl start ssh 
 ```
 
-If wifi is activate then deactivate
+If wifi is activate then deactivate.
+
 ```bash
 sudo su
 crontab -e
 @reboot sudo ifconfig wlan0 down
 ```
 
-Change IP and add static IP
+**[Optional]** Change IP and add static IP.
+
 ```bash
 # get current DNS
 cat /etc/resolv.conf
@@ -44,6 +90,7 @@ interface eth0
 static ip_address=<STATICIP>/24
 static routers=<ROUTERIP>
 static domain_name_servers=<DNSIP>
+# reboot system for apply changes
 sudo reboot
 ```
 
