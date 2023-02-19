@@ -8,3 +8,5 @@ sonarr
 jackett
 plex
 nginx
+unbound
+wireguard
