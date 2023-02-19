@@ -3,8 +3,8 @@
 ### 1. Download Raspbian
 
    * [Raspbian](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
-   * [Etcher](https://etcher.io/)
-   * Flash SD
+   * [Raspberry Pi Imager](https://www.raspberrypi.com/software/) or [Etcher](https://etcher.io/)
+   * Flash SD with the img (use lite for non graphical env)
   
 ### 2. Install all and configure the Raspberry
 
@@ -12,12 +12,12 @@
 
 Create new user.
 ```bash
-sudo useradd username
+sudo useradd -m username
 sudo passwd username
 su username
 ```
 
-**[Optional]** Change **pi** and **root** password's.
+Change **pi** and **root** password's.
 
 ```bash
 sudo passwd pi
@@ -54,21 +54,26 @@ ssh-copy-id -i ~/.ssh/id_rsa.pub username@server_ip
 **[Optional]** Add more security by allowing only your user to access via ssh and denying root access via ssh.
 
 ```bash
-# gice sudo permissions to the created user
-sudo useradd username -G sudo
+# give sudo permissions to the created user
+sudo usermod -aG sudo bis
 # [Optional] edit sudo file for no password
-sudo visudo
+sudo EDITOR=vim visudo
 # [Optional] copy this inside 
 %sudo   ALL=(ALL:ALL) NOPASSWD:ALL
+```
+
+```bash
 # modify sshd_config for only access to your user
 echo "AllowUsers username" | sudo tee -a /etc/ssh/sshd_config
 # deny root access in ssh
 echo "PermitRootLogin no" | sudo tee -a /etc/ssh/sshd_config
-# activate ssh
+# restart ssh
+sudo systemctl restart ssh
+# activate ssh if is not enable
 sudo systemctl enable ssh && sudo systemctl start ssh 
 ```
 
-If wifi is activate then deactivate.
+**[Optional]** If wifi is activate then deactivate.
 
 ```bash
 sudo su
@@ -102,6 +107,7 @@ sudo apt-get update && sudo apt-get install -y \
      ca-certificates \
      curl \
      gnupg2 \
+     git \
      software-properties-common \
      vim \
      fail2ban \
@@ -120,8 +126,18 @@ sudo apt-key fingerprint 0EBFCD88
 
 ### 5. Add Docker repo
 
+Docker for armhf --> 32bit
+
 ```bash
 echo "deb [arch=armhf] https://download.docker.com/linux/debian \
+     $(lsb_release -cs) stable" | \
+    sudo tee /etc/apt/sources.list.d/docker.list
+```
+
+Docker for arm64 --> 64bit
+
+```bash
+echo "deb [arch=arm64] https://download.docker.com/linux/debian \
      $(lsb_release -cs) stable" | \
     sudo tee /etc/apt/sources.list.d/docker.list
 ```
@@ -135,9 +151,11 @@ sudo apt-get update && sudo apt-get install -y --no-install-recommends docker-ce
 ### 7. Add your user to Docker group for avoid call Docker with sudo
 
 ```bash
-sudo usermod -a -G docker pi
+sudo usermod -aG docker $USER
 #(logout and login)
 ```
+
+[Optional] For storage docker tmp files in Disk.
 
 ```bash
 sudo vim /etc/default/docker
@@ -152,6 +170,7 @@ List all the devices.
 sudo su
 fdisk -l
 ```
+
 Select which one you need to mount.
 
 ```bash
@@ -160,22 +179,45 @@ ls -l /dev/disk/by-uuid/
 ```
 
 Copy the UUID in `/etc/fstab`
+
 ```bash
 # edit fstab
+vim /etc/fstab
 UUID="" /mnt/storage ntfs-3g defaults,auto 0 0
+mkdir /mnt/storage
 # mount disc
 mount -a
 sudo reboot
 ```
 
+### 9. Start `rpi-server`
+
+```bash
+cd rpi-server
+# Create Docker network Macvlan
+docker network create -d macvlan --subnet 192.168.1.100/24 --gateway 192.168.1.1 -o parent=eth0 rpi-lan
+# Configure .env file for custom values
+vim .env
+# Startup server
+docker-compose up -d
+```
+
 # Content
 
- * [Plex](https://github.com/jaymoulin/docker-plex)
- * [Flexget](https://github.com/Flexget/Flexget)
- * [Transmission](https://gitlab.com/jaymoulin/docker-transmission)
+ * [Transmission](https://github.com/haugene/docker-transmission-openvpn)
+ * [OpenVPN](https://github.com/OpenVPN/openvpn)
  * [Pihole](https://github.com/pi-hole/docker-pi-hole)
+ * [Unbound](https://github.com/MatthewVance/unbound-docker-rpi)
+ * [Wireguard](https://github.com/linuxserver/docker-wireguard)
+ * [Plex](https://github.com/jaymoulin/docker-plex)
+ * [Sonarr](https://github.com/linuxserver/docker-sonarr)
+ * [Radarr](https://github.com/linuxserver/docker-radarr)
+ * [Jackett](https://github.com/linuxserver/docker-jackett)
+ * [Homer](https://github.com/bastienwirtz/homer)
+ * [Nginx](https://github.com/NginxProxyManager/nginx-proxy-manager)
  * [Portainer](https://github.com/portainer/portainer)
  * [Samba](https://github.com/dperson/samba)
+ * [PlexTraktSync](https://github.com/Taxel/PlexTraktSync)
 
 # Contributions
 
