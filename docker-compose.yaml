@@ -1,141 +1,326 @@
-version: "2.4"
-services:
-  plex:
-    image: jaymoulin/plex:1.22.0.4163
-    container_name: plex
-    restart: always
-    hostname: raspberrypi
-    expose:
-      - 32400
-      - 33400
-    volumes:
-      - ${STORAGE}/Plex Media Server:/root/Library/Application Support/Plex Media Server
-      - ${STORAGE}/Media:/media
-      - ${STORAGE}/tmp:/tmp
-    networks:
-      lan:
-        ipv4_address: 192.168.1.110
+# Raspberry Pi Server
+# armhf or arm32v7 --> 32bit
+# arm64 or arm64v8--> 64bit
 
-  transmission:
-    image : jaymoulin/transmission
-    container_name: transmission
+version: "3.7"
+
+networks:
+  rpi-net:
+  rpi-lan:
+    external: true
+
+x-extra_hosts:
+  # This is added so that within each service you can communicate to another service by using the DNS name of pi rather
+  # than using IP address
+  &rpi-server
+  # Change this to IP of your Router
+  - "router.home:192.168.1.1"
+  # Change this to IP of your RPi
+  - "server.home:192.168.1.100"
+  - "plex.home:192.168.1.110"
+
+services:
+
+  # To run this container, you would need an openvpn provider. I use PIA and hence in here that is used as an
+  # example. Please look at the documentation to understand each of the config variables.
+  # Documentation: https://haugene.github.io/docker-transmission-openvpn/
+  # Transmission: https://github.com/transmission/transmission/wiki/Editing-Configuration-Files
+  transmission-openvpn:
+    image: haugene/transmission-openvpn:3.0.2-arm64
+    container_name: transmission-openvpn
+    hostname: transmission
     restart: always
-    command: transmission-daemon -f -g /config
-    expose:
-      - 9091
     ports:
       - 9091:9091
       - 51413:51413
       - 51413:51413/udp
-    volumes:
-      - ./transmission:/config
-      - ${STORAGE}/Transmission:/downloads
-
-  flexget:
-    build: flexget-arm
-    container_name: flexget-arm
-    restart: always
     environment:
-      - TORRENT_PLUGIN=transmission
-      - FG_WEBUI_PASSWD=${PASSWD}
-    links:
-      - transmission
-    ports:
-      - 5050:5050
-    volumes:
-      - ./flexget:/config
-      - ${STORAGE}/Transmission:/downloads
-      - ${STORAGE}/Media:/storage
-  
-  pihole:
-    image: pihole/pihole:v5.7
-    container_name: pihole
-    restart: always 
-    hostname: raspberrypi
-    environment:
-      - TZ=Europe/Madrid
-      - WEBPASSWORD=${PASSWD}
-    ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "67:67/udp"
-      - "80:80/tcp"
-      - "443:443/tcp"
-    volumes:
-       - './pihole/etc-pihole/:/etc/pihole/'
-       - './pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/'
-    dns:
-      - 127.0.0.1
-      - 1.1.1.1
+      - PUID=${UID}
+      - PGID=${UID}
+      - TZ=${TZ}
+      - OPENVPN_PROVIDER=${OPENVPN_PROVIDER}
+      - OPENVPN_CONFIG=${OPENVPN_CONFIG}
+      - OPENVPN_USERNAME=${OPENVPN_USERNAME}
+      - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
+      - OPENVPN_OPTS=--mute-replay-warnings --inactive 3600 --ping 10 --ping-exit 60
+      - PIA_OPENVPN_CONFIG_BUNDLE=openvpn
+      - LOCAL_NETWORK=${LOCAL_NETWORK}
+      - TRANSMISSION_DOWNLOAD_DIR=${TRANSMISSION_DOWNLOAD_DIR}
+      - TRANSMISSION_INCOMPLETE_DIR_ENABLED=${TRANSMISSION_INCOMPLETE_DIR_ENABLED}
+      - TRANSMISSION_BLOCKLIST_ENABLED=${TRANSMISSION_BLOCKLIST_ENABLED}
+      - TRANSMISSION_BLOCKLIST_URL=${TRANSMISSION_BLOCKLIST_URL}
+      - TRANSMISSION_ENCRYPTION=${TRANSMISSION_ENCRYPTION}
+      - TRANSMISSION_RATIO_LIMIT_ENABLED=${TRANSMISSION_RATIO_LIMIT_ENABLED}
+      - TRANSMISSION_DOWNLOAD_QUEUE_SIZE=${TRANSMISSION_DOWNLOAD_QUEUE_SIZE}
+      - TRANSMISSION_PEER_LIMIT_GLOBAL=${TRANSMISSION_PEER_LIMIT_GLOBAL}
+      - TRANSMISSION_PEER_LIMIT_PER_TORRENT=${TRANSMISSION_PEER_LIMIT_PER_TORRENT}
+      - TRANSMISSION_PEER_PORT=${TRANSMISSION_PEER_PORT}
+      - TRANSMISSION_PEER_PORT_RANDOM_HIGH=${TRANSMISSION_PEER_PORT_RANDOM_HIGH}
+      - TRANSMISSION_PEER_PORT_RANDOM_LOW=${TRANSMISSION_PEER_PORT_RANDOM_LOW}
+      - TRANSMISSION_PEER_PORT_RANDOM_ON_START=${TRANSMISSION_PEER_PORT_RANDOM_ON_START}
+      - TRANSMISSION_PORT_FORWARDING_ENABLED=${TRANSMISSION_PORT_FORWARDING_ENABLED}
+      - TRANSMISSION_RPC_WHITELIST=${TRANSMISSION_RPC_WHITELIST}
+      - TRANSMISSION_RPC_AUTHENTICATION_REQUIRED=${TRANSMISSION_RPC_AUTHENTICATION_REQUIRED}
+      - TRANSMISSION_RPC_USERNAME=${TRANSMISSION_RPC_USERNAME}
+      - TRANSMISSION_RPC_PASSWORD=${TRANSMISSION_RPC_PASSWORD}
+      - TRANSMISSION_UMASK=${TRANSMISSION_UMASK}
+      - TRANSMISSION_UTP_ENABLED=${TRANSMISSION_UTP_ENABLED}
+      - TRANSMISSION_IDLE_SEEDING_LIMIT=${TRANSMISSION_IDLE_SEEDING_LIMIT}
+      - TRANSMISSION_IDLE_SEEDING_LIMIT_ENABLED=${TRANSMISSION_IDLE_SEEDING_LIMIT_ENABLED}
+      - TRANSMISSION_TRASH_ORIGINAL_TORRENT_FILES=${TRANSMISSION_TRASH_ORIGINAL_TORRENT_FILES}
+    extra_hosts: *rpi-server
+    networks:
+      - rpi-net
+    privileged: true
     cap_add:
       - NET_ADMIN
-
-  samba:
-    image: dperson/samba:rpi
-    container_name: samba
-    restart: always
-    command: '-u ${SAMBA_USER};${SAMBA_PASS} -s "Drive;/Drive;yes;no"'
-    stdin_open: true
-    tty: true
-    ports:
-      - 139:139
-      - 445:445
-    volumes:
-      - /usr/share/zoneinfo/Europe/Madrid:/etc/localtime
-      - /mnt/storage:/Drive
-
-  portainer-ce:
-    image: portainer/portainer-ce:2.1.1
-    container_name: portainer
-    restart: always
-    expose:
-      - 8000
-      - 9002
-    ports:
-      - 8000:8000
-      - 9002:9000
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./portainer/data:/data 
-
-  rpi-monitor:
-    image: michaelmiklis/rpi-monitor:latest
-    container_name: rpi-monitor
-    restart: always
-    ports:
-      - 8888:8888
-    volumes:
-      - /opt/vc:/opt/vc
-      - /boot:/boot
-      - /sys:/dockerhost/sys:ro
-      - /etc:/dockerhost/etc:ro
-      - /etc:/dockerhost/etc:ro
-      - /proc:/dockerhost/proc:ro
-      - /usr/lib:/dockerhost/usr/lib:ro
     devices:
-      - /dev/vchiq:/dev/vchiq
-      - /dev/vcsm:/dev/vcsm
+      - /dev/net/tun # This creates a tunnel for Transmission
+    volumes:
+      - ${STORAGE}/Transmission/complete:/data/complete
+      - ${STORAGE}/Transmission/incomplete:/data/incomplete
+      - ./transmission:/data/transmission-home
+  
+  # Documentation: https://github.com/chriscrowe/docker-pihole-unbound/tree/master/one-container
+  pihole:
+    image: cbcrowe/pihole-unbound:2022.01.1
+    container_name: pihole
+    hostname: pihole
+    restart: always
+    ports:
+      - 53:53/tcp
+      - 53:53/udp
+      - 443:443/tcp
+      - 80:80/tcp
+    environment:
+      - ServerIP=${SERVERIP}
+      - TZ=${TZ}
+      - WEBPASSWORD=${WEBPASSWORD}
+      - REV_SERVER=${REV_SERVER}
+      - REV_SERVER_DOMAIN=${REV_SERVER_DOMAIN}
+      - REV_SERVER_TARGET=${REV_SERVER_TARGET}
+      - REV_SERVER_CIDR=${REV_SERVER_CIDR}
+      - DNS1=127.0.0.1#5335 # Hardcoded to our Unbound server
+      - DNS2=127.0.0.1#5335 # Hardcoded to our Unbound server
+      - DNSSEC="true" # Enable DNSSEC
+    networks:
+      rpi-net:
+      rpi-lan:
+        ipv4_address: 192.168.1.200
+    extra_hosts: *rpi-server
+    # Recommended but not required (DHCP needs NET_ADMIN)
+    # https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./pihole/etc-pihole/:/etc/pihole/
+      - ./pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/
+
+  wireguard:
+    image: linuxserver/wireguard:arm64v8-v1.0.20210914-ls54
+    container_name: wireguard
+    hostname: wireguard
+    restart: always
+    ports:
+      - 51820:51820/udp         # Forward port 51820/udp on your router to the server IP
+    environment:
+      - PUID=${UID}
+      - PGID=${UID}
+      - TZ=${TZ}
+      - SERVERPORT=51820
+      - PEERS=2                 # How many peers to generate for you (clients)
+      - PEERDNS=192.168.1.200   # Optional, put pihole if you have static IP
+      - INTERNAL_SUBNET=10.10.10.0
+    extra_hosts: *rpi-server
+    networks:
+      - rpi-net
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    dns:
+      - 192.168.1.200           # Put pihole if you have static IP
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - ./wireguard:/config
+      - /lib/modules:/lib/modules
+
+  plex:
+    image: lscr.io/linuxserver/plex:arm64v8-1.25.3
+    container_name: plex
+    hostname: plex
+    restart: always
+    environment:
+      - PUID=${UID}
+      - PGID=${UID}
+      - TZ=${TZ}
+    extra_hosts: *rpi-server
+    networks:
+      rpi-net:
+      rpi-lan:
+        ipv4_address: 192.168.1.110
+    volumes:
+      - ./plex:/config
+      - ${STORAGE}/Media:/media
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:arm64v8-3.0.6
+    container_name: sonarr
+    hostname: sonarr
+    restart: always
+    ports:
+      - 8989:8989
+    environment:
+      - PUID=${UID}
+      - PGID=${UID}
+      - TZ=${TZ}
+    extra_hosts: *rpi-server
+    networks:
+      - rpi-net
+    volumes:
+      - ./sonarr:/config
+      - ${STORAGE}/Transmission/complete:/downloads
+      - ${STORAGE}/Media/Series:/tv
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:arm64v8-3.2.2
+    container_name: radarr
+    hostname: radarr
+    restart: always
+    ports:
+      - 7878:7878
+    environment:
+      - PUID=${UID}
+      - PGID=${UID}
+      - TZ=${TZ}
+    extra_hosts: *rpi-server
+    networks:
+      - rpi-net
+    volumes:
+      - ./radarr:/config
+      - ${STORAGE}/Transmission/complete:/downloads
+      - ${STORAGE}/Media/Movies:/movies
+
+  jackett:
+    image: lscr.io/linuxserver/jackett:arm64v8-0.20.244
+    container_name: jackett
+    restart: always
+    ports:
+      - 9117:9117
+    environment:
+      - PUID=${UID}
+      - PGID=${UID}
+      - TZ=${TZ}
+    extra_hosts: *rpi-server
+    networks:
+      - rpi-net
+    dns:
+      - 1.1.1.1
+    volumes:
+      - ./jackett:/config
+      - ${STORAGE}/Transmission:/downloads
 
   homer:
-    image: b4bz/homer:21.09.2-arm32v7
+    image: b4bz/homer:21.09.2-arm64v8
     container_name: homer
     restart: always
     ports:
       - 8080:8080
     environment:
-      - UID=1001
-      - GID=1001
-      - TZ=Europe/Madrid
-      - PASSWORD=${PASSWD}
+      - UID=${UID}
+      - GID=${GID}
+      - TZ=${TZ}
+      - PASSWORD=${PASSWORD}
+    extra_hosts: *rpi-server
+    networks:
+      - rpi-net
     volumes:
       - ./homer:/www/assets
 
-networks:
-  lan:  # This option is only compatible for v.2 of docker-compose
-    driver: macvlan
-    driver_opts:
-      parent: eth0 # Your ethernet conexion
-    ipam:
-      config:
-        - subnet: "192.168.1.100/24" # Create you own subnet 
-          gateway: "192.168.1.1" # Router IP
+  nginx:
+    image: jc21/nginx-proxy-manager:2.9.15
+    container_name: nginx
+    hostname: nginx
+    restart: always
+    ports:
+      - 80:80
+      - 81:81
+      - 443:443
+    environment:
+      - UID=${UID}
+      - GID=${GID}
+      - DB_SQLITE_FILE=/data/database.sqlite
+    networks:
+      - rpi-net
+    volumes:
+      - ./nginx/config/config.json:/app/config/production.json
+      - ./nginx/data:/data
+      - ./nginx/letsencrypt:/etc/letsencrypt
+  
+  # [Optional]
+  portainer-ce:
+    image: portainer/portainer-ce:linux-arm64-2.9.3
+    container_name: portainer
+    restart: always
+    ports:
+      - 8000:8000
+      - 9000:9000
+    environment:
+      - UID=${UID}
+      - GID=${GID}
+    extra_hosts: *rpi-server
+    networks:
+      - rpi-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./portainer/data:/data 
+
+  # [Optional]
+  samba:
+    image: dperson/samba:aarch64
+    container_name: samba
+    restart: always
+    ports:
+      - 139:139
+      - 445:445
+    extra_hosts: *rpi-server
+    networks:
+      - rpi-net
+    command: '-u ${SAMBA_USER};${SAMBA_PASS} -s "Drive;/Drive;yes;no"'
+    stdin_open: true
+    tty: true
+    volumes:
+      - /usr/share/zoneinfo/Europe/Madrid:/etc/localtime
+      - /mnt/storage:/Drive
+
+  # [Optional]
+  # Documentation https://github.com/Taxel/PlexTraktSync
+  plextraktsync:
+    image: ghcr.io/taxel/plextraktsync:0.18.24
+    container_name: plextraktsync
+    restart: always
+    extra_hosts: *rpi-server
+    networks:
+      - rpi-net
+      - rpi-lan
+    command: watch
+    volumes:
+      - ./plextraktsync:/app/config
+
+  # [Optional]
+  # rpi-monitor:
+  #   image: michaelmiklis/rpi-monitor:latest
+  #   container_name: rpi-monitor
+  #   restart: always
+  #   ports:
+  #     - 8888:8888
+  #   devices:
+  #     - /dev/vchiq:/dev/vchiq
+  #     - /dev/vcsm:/dev/vcsm
+  #   volumes:
+  #     - /opt/vc:/opt/vc
+  #     - /boot:/boot
+  #     - /sys:/dockerhost/sys:ro
+  #     - /etc:/dockerhost/etc:ro
+  #     - /proc:/dockerhost/proc:ro
+  #     - /usr/lib:/dockerhost/usr/lib:ro
