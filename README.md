@@ -202,6 +202,10 @@ vim .env
 docker-compose up -d
 ```
 
+## Testing
+
+- For testing Transmission with OpenVPN add this torrent from [TorGuard](https://torguard.net/checkmytorrentipaddress.php?hash=f1f5bda133bdbb4743773cc8548cbaee1fbff88a).
+
 # Content
 
  * [Transmission](https://github.com/haugene/docker-transmission-openvpn)
