@@ -165,12 +165,35 @@ services:
       rpi-net:
       rpi-lan:
         ipv4_address: 192.168.1.110
-
     volumes:
       - ./plex:/config
       - ${STORAGE}/Media:/media
     healthcheck:
       test: curl -fs http://localhost || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  # Documentation https://github.com/Taxel/PlexTraktSync
+  plextraktsync:
+    image: ghcr.io/taxel/plextraktsync:0.25.16
+    container_name: plextraktsync
+    restart: always
+    environment:
+      - PUID=${UID}
+      - PGID=${UID}
+      - TZ=${TZ}
+    extra_hosts: *rpi-server
+    networks:
+      rpi-net:
+      rpi-lan:
+        ipv4_address: 192.168.1.120
+    command: watch
+    volumes:
+      - ./plextraktsync:/app/config
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8080 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 30s
@@ -330,20 +353,6 @@ services:
     volumes:
       - /usr/share/zoneinfo/Europe/Madrid:/etc/localtime
       - /mnt/storage:/Drive
-
-  # [Optional]
-  # Documentation https://github.com/Taxel/PlexTraktSync
-  plextraktsync:
-    image: ghcr.io/taxel/plextraktsync:0.18.24
-    container_name: plextraktsync
-    restart: always
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-      - rpi-lan
-    command: watch
-    volumes:
-      - ./plextraktsync:/app/config
 
   # [Optional]
   # rpi-monitor:
