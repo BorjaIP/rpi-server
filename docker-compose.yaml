@@ -17,7 +17,7 @@ x-extra_hosts:
   - "router.home:192.168.1.1"
   # Change this to IP of your RPi
   - "server.home:192.168.1.100"
-  - "plex.home:192.168.1.110"
+  - "plex.home:192.168.1.210"
 
 services:
 
@@ -83,7 +83,7 @@ services:
   
   # Documentation: https://github.com/chriscrowe/docker-pihole-unbound/tree/master/one-container
   pihole:
-    image: cbcrowe/pihole-unbound:2022.01.1
+    image: cbcrowe/pihole-unbound:2023.01.10
     container_name: pihole
     hostname: pihole
     restart: always
@@ -93,16 +93,19 @@ services:
       - 443:443/tcp
       - 80:80/tcp
     environment:
-      - ServerIP=${SERVERIP}
       - TZ=${TZ}
       - WEBPASSWORD=${WEBPASSWORD}
+      - FTLCONF_LOCAL_IPV4=${FTLCONF_LOCAL_IPV4}
       - REV_SERVER=${REV_SERVER}
       - REV_SERVER_DOMAIN=${REV_SERVER_DOMAIN}
       - REV_SERVER_TARGET=${REV_SERVER_TARGET}
       - REV_SERVER_CIDR=${REV_SERVER_CIDR}
-      - DNS1=127.0.0.1#5335 # Hardcoded to our Unbound server
-      - DNS2=127.0.0.1#5335 # Hardcoded to our Unbound server
-      - DNSSEC="true" # Enable DNSSEC
+      # If we don't specify two, it will auto pick google.
+      - PIHOLE_DNS_1=127.0.0.1#5335       # Hardcoded to our Unbound server
+      - PIHOLE_DNS_2=127.0.0.1#5335       # Hardcoded to our Unbound server
+      - DNSSEC="true"                     # Enable DNSSEC
+      - DNSMASQ_LISTENING="single"
+      - DNS_BOGUS_PRIV="true"
     networks:
       rpi-net:
       rpi-lan:
@@ -115,41 +118,6 @@ services:
     volumes:
       - ./pihole/etc-pihole/:/etc/pihole/
       - ./pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/
-
-  wireguard:
-    image: linuxserver/wireguard:arm64v8-v1.0.20210914-ls54
-    container_name: wireguard
-    hostname: wireguard
-    restart: always
-    ports:
-      - 51820:51820/udp         # Forward port 51820/udp on your router to the server IP
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-      - SERVERPORT=51820
-      - PEERS=2                 # How many peers to generate for you (clients)
-      - PEERDNS=192.168.1.200   # Optional, put pihole if you have static IP
-      - INTERNAL_SUBNET=10.10.10.0
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    dns:
-      - 192.168.1.200           # Put pihole if you have static IP
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-    volumes:
-      - ./wireguard:/config
-      - /lib/modules:/lib/modules
-    healthcheck:
-      test: curl -fs http://localhost || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
 
   plex:
     image: lscr.io/linuxserver/plex:arm64v8-1.25.3
@@ -164,12 +132,12 @@ services:
     networks:
       rpi-net:
       rpi-lan:
-        ipv4_address: 192.168.1.110
+        ipv4_address: 192.168.1.210
     volumes:
       - ./plex:/config
       - ${STORAGE}/Media:/media
     healthcheck:
-      test: curl -fs http://localhost || exit 1
+      test: wget --no-verbose --tries=1 --spider http://plex.home:32400/?X-Plex-Token=${PLEX_TOKEN} > /dev/null 2>&1 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 30s
@@ -180,6 +148,7 @@ services:
     image: ghcr.io/taxel/plextraktsync:0.25.16
     container_name: plextraktsync
     restart: always
+    depends_on: [plex]
     environment:
       - PUID=${UID}
       - PGID=${UID}
@@ -188,12 +157,52 @@ services:
     networks:
       rpi-net:
       rpi-lan:
-        ipv4_address: 192.168.1.120
+        ipv4_address: 192.168.1.220
     command: watch
     volumes:
       - ./plextraktsync:/app/config
     healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:8080 || exit 1
+      test: wget --no-verbose --tries=1 --spider http://plex.home:32400/?X-Plex-Token=${PLEX_TOKEN} > /dev/null 2>&1 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
+  wireguard:
+    image: linuxserver/wireguard:arm64v8-1.0.20210914
+    container_name: wireguard
+    hostname: wireguard
+    restart: always
+    depends_on: [pihole]
+    ports:
+      - 51820:51820/udp         # Forward port 51820/udp on your router to the server IP
+    environment:
+      - PUID=${UID}
+      - PGID=${UID}
+      - TZ=${TZ}
+      - SERVERURL=${DOMAIN}
+      - SERVERPORT=51820
+      - PEERS=2                 # How many peers to generate for you (clients)
+      - PEERDNS=192.168.1.200   # Optional, put pihole if you have static IP
+      - INTERNAL_SUBNET=10.10.10.0
+      - ALLOWEDIPS=192.168.1.0/24
+    extra_hosts: *rpi-server
+    networks:
+      rpi-net:
+      rpi-lan:
+        ipv4_address: 192.168.1.230
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    dns:
+      - 192.168.1.200           # Put pihole if you have static IP
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - ./wireguard:/config
+      - /lib/modules:/lib/modules
+    healthcheck:
+      test: curl -o /dev/null -m 3 -fs https://1.1.1.1/dns-query?ct=application/dns-json&name=www.google.com&type=AAAA || exit 1
       interval: 30s
       timeout: 10s
       start_period: 30s
@@ -221,6 +230,7 @@ services:
       test: curl -fs http://localhost:8989 || exit 1
       interval: 30s
       timeout: 10s
+      start_period: 30s
       retries: 3
 
   radarr:
@@ -245,6 +255,7 @@ services:
       test: curl -fs http://localhost:7878 || exit 1
       interval: 30s
       timeout: 10s
+      start_period: 30s
       retries: 3
 
   jackett:
@@ -269,6 +280,7 @@ services:
       test: curl -fs http://localhost:9117 || exit 1
       interval: 30s
       timeout: 10s
+      start_period: 30s
       retries: 3
 
   homer:
@@ -291,6 +303,7 @@ services:
       test: wget --no-verbose --tries=1 --spider http://localhost:8080 || exit 1
       interval: 30s
       timeout: 10s
+      start_period: 30s
       retries: 3
 
   nginx:
@@ -316,9 +329,9 @@ services:
       test: curl -fs http://localhost:81 || exit 1
       interval: 30s
       timeout: 10s
+      start_period: 30s
       retries: 3
   
-  # [Optional]
   portainer-ce:
     image: portainer/portainer-ce:linux-arm64-2.17.1
     container_name: portainer
@@ -336,7 +349,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./portainer/data:/data 
 
-  # [Optional]
   samba:
     image: dperson/samba:aarch64
     container_name: samba
@@ -353,6 +365,28 @@ services:
     volumes:
       - /usr/share/zoneinfo/Europe/Madrid:/etc/localtime
       - /mnt/storage:/Drive
+
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:arm64v8-version-ab5e2d0e
+    container_name: duckdns
+    restart: always
+    environment:
+      - PUID=${UID}
+      - PGID=${GID}
+      - TZ=${TZ}
+      - SUBDOMAINS=${DOMAIN}
+      - TOKEN=${TOKEN}
+      - LOG_FILE=false
+    networks:
+      - rpi-net
+    volumes:
+      - ./duckdns:/config
+    healthcheck:
+      test: curl -o /dev/null -m 3 -fs https://1.1.1.1/dns-query?ct=application/dns-json&name=www.google.com&type=AAAA || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
 
   # [Optional]
   # rpi-monitor:

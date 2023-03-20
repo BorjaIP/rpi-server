@@ -195,7 +195,8 @@ sudo reboot
 ```bash
 cd rpi-server
 # Create Docker network Macvlan
-docker network create -d macvlan --subnet 192.168.1.100/24 --gateway 192.168.1.1 -o parent=eth0 rpi-lan
+# ip range: 192.168.1.193 - 192.168.1.254
+docker network create -d macvlan --subnet 192.168.1.0/24 --ip-range 192.168.1.192/26 --gateway 192.168.1.1 -o parent=eth0 rpi-lan
 # Configure .env file for custom values
 vim .env
 # Startup server
