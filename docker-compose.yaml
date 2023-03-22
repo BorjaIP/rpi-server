@@ -141,7 +141,7 @@ services:
       - ./plex:/config
       - ${STORAGE}/Media:/media
     healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://plex.home:32400/?X-Plex-Token=${PLEX_TOKEN} > /dev/null 2>&1 || exit 1
+      test: wget -nv -t 1 --spider --spider http://plex.home:32400/?X-Plex-Token=${PLEX_TOKEN} > /dev/null 2>&1 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 30s
@@ -166,7 +166,7 @@ services:
     volumes:
       - ./plextraktsync:/app/config
     healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://plex.home:32400/?X-Plex-Token=${PLEX_TOKEN} > /dev/null 2>&1 || exit 1
+      test: wget -nv -t 1 --spider http://plex.home:32400/?X-Plex-Token=${PLEX_TOKEN} > /dev/null 2>&1 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 30s
@@ -305,7 +305,7 @@ services:
     volumes:
       - ./homer:/www/assets
     healthcheck:
-      test: wget --no-verbose --tries=1 --spider http://localhost:8080 || exit 1
+      test: wget -nv -t 1 --spider --spider http://localhost:8080 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 30s
@@ -395,14 +395,19 @@ services:
 
   ## Monitoring using cAdvisor, Node Exporter, Prometheus and Grafana 
   ## Documentation: https://github.com/oijkn/Docker-Raspberry-PI-Monitoring
+  ## cAdvisor: https://github.com/ZCube/cadvisor-docker
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    image: zcube/cadvisor:v0.45.0
     container_name: cadvisor
     hostname: cadvisor
     restart: always
     privileged: true
     expose:
       - 8080
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --disable_metrics=accelerator,cpu_topology,disk,tcp,udp,percpu,sched,process,hugetlb,resctrl,cpuset,advtcp
     devices:
       - /dev/kmsg
     networks:
@@ -414,6 +419,12 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
       - /etc/machine-id:/etc/machine-id:ro
+    healthcheck:
+      test: wget -nv -t 1 --spider http://localhost:8080 > /dev/null 2>&1 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
 
   node-exporter:
     image: prom/node-exporter:v1.5.0
@@ -435,6 +446,12 @@ services:
       - /sys:/host/sys:ro
       - /:/rootfs:ro
       - /:/host:ro,rslave
+    healthcheck:
+      test: wget -nv -t 1 --spider http://localhost:9100 > /dev/null 2>&1 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
 
   prometheus:
     image: prom/prometheus:v2.43.0
@@ -443,8 +460,8 @@ services:
     restart: always
     depends_on: [cadvisor, node-exporter]
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
     expose:
       - 9090
     networks:
@@ -452,6 +469,12 @@ services:
     volumes:
       - prometheus-data:/prometheus
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:rw
+    healthcheck:
+      test: wget -nv -t 1 --spider http://localhost:9090 > /dev/null 2>&1 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
 
   grafana:
     image: grafana/grafana:9.4.0
@@ -477,3 +500,9 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
+    healthcheck:
+      test: wget -nv -t 1 --spider http://localhost:3000/api/health > /dev/null 2>&1 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
