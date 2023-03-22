@@ -9,6 +9,10 @@ networks:
   rpi-lan:
     external: true
 
+volumes:
+  prometheus-data:
+  grafana-data:
+
 x-extra_hosts:
   # This is added so that within each service you can communicate to another service by using the DNS name of pi rather
   # than using IP address
@@ -197,6 +201,7 @@ services:
     dns:
       - 192.168.1.200           # Put pihole if you have static IP
     sysctls:
+      - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
     volumes:
       - ./wireguard:/config
@@ -388,20 +393,87 @@ services:
       start_period: 30s
       retries: 3
 
-  # [Optional]
-  # rpi-monitor:
-  #   image: michaelmiklis/rpi-monitor:latest
-  #   container_name: rpi-monitor
-  #   restart: always
-  #   ports:
-  #     - 8888:8888
-  #   devices:
-  #     - /dev/vchiq:/dev/vchiq
-  #     - /dev/vcsm:/dev/vcsm
-  #   volumes:
-  #     - /opt/vc:/opt/vc
-  #     - /boot:/boot
-  #     - /sys:/dockerhost/sys:ro
-  #     - /etc:/dockerhost/etc:ro
-  #     - /proc:/dockerhost/proc:ro
-  #     - /usr/lib:/dockerhost/usr/lib:ro
+  ## Monitoring using cAdvisor, Node Exporter, Prometheus and Grafana 
+  ## Documentation: https://github.com/oijkn/Docker-Raspberry-PI-Monitoring
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: cadvisor
+    hostname: cadvisor
+    restart: always
+    privileged: true
+    expose:
+      - 8080
+    devices:
+      - /dev/kmsg
+    networks:
+      - rpi-net
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+      - /etc/machine-id:/etc/machine-id:ro
+
+  node-exporter:
+    image: prom/node-exporter:v1.5.0
+    container_name: node-exporter
+    hostname: exporter
+    restart: always
+    expose:
+      - 9100
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/host
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    networks:
+      - rpi-net
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /:/host:ro,rslave
+
+  prometheus:
+    image: prom/prometheus:v2.43.0
+    container_name: prometheus
+    hostname: prometheus
+    restart: always
+    depends_on: [cadvisor, node-exporter]
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    expose:
+      - 9090
+    networks:
+      - rpi-net
+    volumes:
+      - prometheus-data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:rw
+
+  grafana:
+    image: grafana/grafana:9.4.0
+    container_name: grafana
+    hostname: grafana
+    restart: always
+    depends_on: [prometheus]
+    user: "${UID}"
+    ports:
+      - 3000:3000
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_SECURITY_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_PATHS_CONFIG=${GF_PATHS_CONFIG}
+      - GF_PATHS_DATA=${GF_PATHS_DATA}
+      - GF_PATHS_HOME=${GF_PATHS_HOME}
+      - GF_PATHS_LOGS=${GF_PATHS_LOGS}
+      - GF_PATHS_PLUGINS=${GF_PATHS_PLUGINS}
+      - GF_PATHS_PROVISIONING=${GF_PATHS_PROVISIONING}
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=${GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH}
+    networks:
+      - rpi-net
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
