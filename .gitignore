@@ -1,9 +1,7 @@
 .env
-flexget
 pihole
 portainer
 transmission
-homer
 radarr
 sonarr
 jackett
@@ -13,3 +11,4 @@ nginx
 unbound
 wireguard
 duckdns
+prowlarr

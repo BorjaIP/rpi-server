@@ -36,8 +36,7 @@ services:
     restart: always
     ports:
       - 9091:9091
-      - 51413:51413
-      - 51413:51413/udp
+      - 9696:9696  # This is Prowlarr Port – managed by VPN Service Network
     environment:
       - PUID=${UID}
       - PGID=${UID}
@@ -49,29 +48,25 @@ services:
       - OPENVPN_OPTS=--mute-replay-warnings --inactive 3600 --ping 10 --ping-exit 60
       - PIA_OPENVPN_CONFIG_BUNDLE=openvpn
       - LOCAL_NETWORK=${LOCAL_NETWORK}
-      - TRANSMISSION_DOWNLOAD_DIR=${TRANSMISSION_DOWNLOAD_DIR}
-      - TRANSMISSION_INCOMPLETE_DIR_ENABLED=${TRANSMISSION_INCOMPLETE_DIR_ENABLED}
+      - TRANSMISSION_ALT_SPEED_DOWN=${TRANSMISSION_ALT_SPEED_DOWN}
+      - TRANSMISSION_ALT_SPEED_TIME_DAY=${TRANSMISSION_ALT_SPEED_TIME_DAY}
+      - TRANSMISSION_ALT_SPEED_TIME_ENABLED=${TRANSMISSION_ALT_SPEED_TIME_ENABLED}
+      - TRANSMISSION_ALT_SPEED_UP=${TRANSMISSION_ALT_SPEED_UP}
       - TRANSMISSION_BLOCKLIST_ENABLED=${TRANSMISSION_BLOCKLIST_ENABLED}
       - TRANSMISSION_BLOCKLIST_URL=${TRANSMISSION_BLOCKLIST_URL}
-      - TRANSMISSION_ENCRYPTION=${TRANSMISSION_ENCRYPTION}
-      - TRANSMISSION_RATIO_LIMIT_ENABLED=${TRANSMISSION_RATIO_LIMIT_ENABLED}
-      - TRANSMISSION_DOWNLOAD_QUEUE_SIZE=${TRANSMISSION_DOWNLOAD_QUEUE_SIZE}
-      - TRANSMISSION_PEER_LIMIT_GLOBAL=${TRANSMISSION_PEER_LIMIT_GLOBAL}
-      - TRANSMISSION_PEER_LIMIT_PER_TORRENT=${TRANSMISSION_PEER_LIMIT_PER_TORRENT}
-      - TRANSMISSION_PEER_PORT=${TRANSMISSION_PEER_PORT}
-      - TRANSMISSION_PEER_PORT_RANDOM_HIGH=${TRANSMISSION_PEER_PORT_RANDOM_HIGH}
-      - TRANSMISSION_PEER_PORT_RANDOM_LOW=${TRANSMISSION_PEER_PORT_RANDOM_LOW}
-      - TRANSMISSION_PEER_PORT_RANDOM_ON_START=${TRANSMISSION_PEER_PORT_RANDOM_ON_START}
-      - TRANSMISSION_PORT_FORWARDING_ENABLED=${TRANSMISSION_PORT_FORWARDING_ENABLED}
-      - TRANSMISSION_RPC_WHITELIST=${TRANSMISSION_RPC_WHITELIST}
-      - TRANSMISSION_RPC_AUTHENTICATION_REQUIRED=${TRANSMISSION_RPC_AUTHENTICATION_REQUIRED}
-      - TRANSMISSION_RPC_USERNAME=${TRANSMISSION_RPC_USERNAME}
-      - TRANSMISSION_RPC_PASSWORD=${TRANSMISSION_RPC_PASSWORD}
-      - TRANSMISSION_UMASK=${TRANSMISSION_UMASK}
-      - TRANSMISSION_UTP_ENABLED=${TRANSMISSION_UTP_ENABLED}
+      - TRANSMISSION_DOWNLOAD_DIR=${TRANSMISSION_DOWNLOAD_DIR}
       - TRANSMISSION_IDLE_SEEDING_LIMIT=${TRANSMISSION_IDLE_SEEDING_LIMIT}
       - TRANSMISSION_IDLE_SEEDING_LIMIT_ENABLED=${TRANSMISSION_IDLE_SEEDING_LIMIT_ENABLED}
+      - TRANSMISSION_INCOMPLETE_DIR_ENABLED=${TRANSMISSION_INCOMPLETE_DIR_ENABLED}
+      - TRANSMISSION_PEER_PORT_RANDOM_LOW=${TRANSMISSION_PEER_PORT_RANDOM_LOW}
+      - TRANSMISSION_RATIO_LIMIT_ENABLED=${TRANSMISSION_RATIO_LIMIT_ENABLED}
+      - TRANSMISSION_RPC_AUTHENTICATION_REQUIRED=${TRANSMISSION_RPC_AUTHENTICATION_REQUIRED}
+      - TRANSMISSION_RPC_WHITELIST=${TRANSMISSION_RPC_WHITELIST}
+      - TRANSMISSION_RPC_WHITELIST_ENABLED=${TRANSMISSION_RPC_WHITELIST_ENABLED}
+      - TRANSMISSION_RPC_USERNAME=${TRANSMISSION_RPC_USERNAME}
+      - TRANSMISSION_RPC_PASSWORD=${TRANSMISSION_RPC_PASSWORD}
       - TRANSMISSION_TRASH_ORIGINAL_TORRENT_FILES=${TRANSMISSION_TRASH_ORIGINAL_TORRENT_FILES}
+      - TRANSMISSION_UMASK=${TRANSMISSION_UMASK}
     extra_hosts: *rpi-server
     networks:
       - rpi-net
@@ -124,7 +119,7 @@ services:
       - ./pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/
 
   plex:
-    image: lscr.io/linuxserver/plex:arm64v8-1.25.3
+    image: lscr.io/linuxserver/plex:arm64v8-1.31.2
     container_name: plex
     hostname: plex
     restart: always
@@ -214,7 +209,7 @@ services:
       retries: 3
 
   sonarr:
-    image: lscr.io/linuxserver/sonarr:arm64v8-3.0.6
+    image: lscr.io/linuxserver/sonarr:arm64v8-3.0.10
     container_name: sonarr
     hostname: sonarr
     restart: always
@@ -239,7 +234,7 @@ services:
       retries: 3
 
   radarr:
-    image: lscr.io/linuxserver/radarr:arm64v8-3.2.2
+    image: lscr.io/linuxserver/radarr:arm64v8-4.3.2
     container_name: radarr
     hostname: radarr
     restart: always
@@ -262,36 +257,31 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
-
-  jackett:
-    image: lscr.io/linuxserver/jackett:arm64v8-0.20.244
-    container_name: jackett
+  
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:arm64v8-1.2.2
+    container_name: prowlarr
     restart: always
-    ports:
-      - 9117:9117
+    depends_on: [transmission-openvpn]
     environment:
       - PUID=${UID}
       - PGID=${UID}
       - TZ=${TZ}
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-    dns:
-      - 1.1.1.1
+    network_mode: "service:transmission-openvpn"
     volumes:
-      - ./jackett:/config
-      - ${STORAGE}/Transmission:/downloads
+      - ./prowlarr:/config
     healthcheck:
-      test: curl -fs http://localhost:9117 || exit 1
+      test: curl -fs http://localhost:9696 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 30s
       retries: 3
 
   homer:
-    image: b4bz/homer:21.09.2-arm64v8
+    image: b4bz/homer:v23.02.2
     container_name: homer
     restart: always
+    user: "${UID}:${GID}"
     ports:
       - 8080:8080
     environment:
@@ -303,7 +293,9 @@ services:
     networks:
       - rpi-net
     volumes:
-      - ./homer:/www/assets
+      - ./homer/custom.css:/www/assets/custom.css
+      - ./homer/icons:/www/assets/icons
+      - ./homer/config.yml:/www/assets/config.yml
     healthcheck:
       test: wget -nv -t 1 --spider --spider http://localhost:8080 || exit 1
       interval: 30s
