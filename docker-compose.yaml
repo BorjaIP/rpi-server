@@ -307,6 +307,23 @@ services:
       start_period: 30s
       retries: 3
 
+  navidrome:
+    image: deluan/navidrome:pr-2840
+    container_name: navidrome
+    hostname: navidrome
+    restart: always
+    user: ${UID}:${UID}
+    ports:
+      - 4533:4533
+    environment:
+      - ND_SCANSCHEDULE=@every 1m
+      - ND_LOGLEVEL=info  
+      - ND_SESSIONTIMEOUT=24h
+      # - ND_BASEURL=""
+    volumes:
+      - ./navidrome:/data
+      - ${STORAGE}/Media/Music:/music:ro
+
   homer:
     image: b4bz/homer:v23.02.2
     container_name: homer
