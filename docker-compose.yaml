@@ -48,6 +48,7 @@ services:
       - OPENVPN_OPTS=--mute-replay-warnings --inactive 3600 --ping 10 --ping-exit 60
       - PIA_OPENVPN_CONFIG_BUNDLE=openvpn
       - LOCAL_NETWORK=${LOCAL_NETWORK}
+      - DISABLE_PORT_UPDATER=${DISABLE_PORT_UPDATER}
       - TRANSMISSION_ALT_SPEED_DOWN=${TRANSMISSION_ALT_SPEED_DOWN}
       - TRANSMISSION_ALT_SPEED_TIME_DAY=${TRANSMISSION_ALT_SPEED_TIME_DAY}
       - TRANSMISSION_ALT_SPEED_TIME_ENABLED=${TRANSMISSION_ALT_SPEED_TIME_ENABLED}
@@ -80,9 +81,9 @@ services:
       - ${STORAGE}/Transmission/incomplete:/data/incomplete
       - ./transmission:/data/transmission-home
   
-  # Documentation: https://github.com/chriscrowe/docker-pihole-unbound/tree/master/one-container
+  # Documentation: https://github.com/chriscrowe/docker-pihole-unbound/tree/main/one-container
   pihole:
-    image: cbcrowe/pihole-unbound:2023.01.10
+    image: cbcrowe/pihole-unbound:2023.11.0
     container_name: pihole
     hostname: pihole
     restart: always
@@ -114,12 +115,13 @@ services:
     # https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
     cap_add:
       - NET_ADMIN
+    shm_size: '512mb'
     volumes:
       - ./pihole/etc-pihole/:/etc/pihole/
       - ./pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/
 
   plex:
-    image: lscr.io/linuxserver/plex:arm64v8-1.31.2
+    image: lscr.io/linuxserver/plex:arm64v8-1.32.8
     container_name: plex
     hostname: plex
     restart: always
@@ -127,6 +129,8 @@ services:
       - PUID=${UID}
       - PGID=${UID}
       - TZ=${TZ}
+      - VERSION=docker
+      - PLEX_CLAIM=${PLEX_CLAIM}
     extra_hosts: *rpi-server
     networks:
       rpi-net:
@@ -134,7 +138,8 @@ services:
         ipv4_address: 192.168.1.210
     volumes:
       - ./plex:/config
-      - ${STORAGE}/Media:/media
+      - ${STORAGE}/Media/Series:/tv
+      - ${STORAGE}/Media/Movies:/movies
     healthcheck:
       test: wget -nv -t 1 --spider --spider http://plex.home:32400/?X-Plex-Token=${PLEX_TOKEN} > /dev/null 2>&1 || exit 1
       interval: 30s
@@ -277,6 +282,31 @@ services:
       start_period: 30s
       retries: 3
 
+  overseerr:
+    image: lscr.io/linuxserver/overseerr:arm64v8-1.33.2
+    container_name: overseerr
+    hostname: overseerr
+    restart: always
+    ports:
+      - 5055:5055
+    environment:
+      - PUID=${UID}
+      - PGID=${UID}
+      - TZ=${TZ}
+    extra_hosts: *rpi-server
+    networks:
+      rpi-net:
+      rpi-lan:
+        ipv4_address: 192.168.1.240
+    volumes:
+      - ./overseerr:/config
+    healthcheck:
+      test: curl -fs http://localhost:5055 || exit 1
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+
   homer:
     image: b4bz/homer:v23.02.2
     container_name: homer
@@ -293,7 +323,7 @@ services:
     networks:
       - rpi-net
     volumes:
-      - ./homer/custom.css:/www/assets/custom.css
+      # - ./homer/custom.css:/www/assets/custom.css
       - ./homer/icons:/www/assets/icons
       - ./homer/config.yml:/www/assets/config.yml
     healthcheck:
