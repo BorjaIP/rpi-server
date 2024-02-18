@@ -216,6 +216,7 @@ services:
 
   # Arr stack
   # Documentation: https://trash-guides.info/
+  # Scripts: https://github.com/RandomNinjaAtk/arr-scripts
   sonarr:
     image: lscr.io/linuxserver/sonarr:arm64v8-3.0.10
     container_name: sonarr
@@ -294,7 +295,7 @@ services:
       retries: 3
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:arm64v8-1.2.2
+    image: lscr.io/linuxserver/prowlarr:arm64v8-1.13.3
     container_name: prowlarr
     restart: always
     depends_on: [transmission-openvpn]
@@ -349,8 +350,12 @@ services:
       - ND_SCANSCHEDULE=@every 1m
       - ND_LOGLEVEL=info  
       - ND_SESSIONTIMEOUT=24h
+      - ND_DEFAULTTHEME=Spotify-ish
       - ND_SPOTIFY_ID=${ND_SPOTIFY_ID}
       - ND_SPOTIFY_SECRET=${ND_SPOTIFY_SECRET}
+      - ND_LASTFM_ENABLED=true
+      - ND_LASTFM_APIKEY=${ND_LASTFM_APIKEY}
+      - ND_LASTFM_SECRET=${ND_LASTFM_SECRET}
     extra_hosts: *rpi-server
     networks:
       - rpi-net

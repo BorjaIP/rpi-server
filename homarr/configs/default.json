@@ -12,200 +12,6 @@
   ],
   "apps": [
     {
-      "id": "579319dd-1778-4a23-bfb1-a5eb2229a456",
-      "name": "Transmission",
-      "url": "http://transmission-openvpn:9091",
-      "appearance": {
-        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/transmission.svg",
-        "appNameStatus": "normal",
-        "positionAppName": "column",
-        "lineClampAppName": 1,
-        "appNameFontSize": 16
-      },
-      "network": {
-        "enabledStatusChecker": true,
-        "statusCodes": [
-          "200",
-          "301",
-          "302",
-          "304",
-          "307",
-          "308"
-        ]
-      },
-      "behaviour": {
-        "isOpeningNewTab": true,
-        "externalUrl": "http://trans.home"
-      },
-      "area": {
-        "type": "wrapper",
-        "properties": {
-          "id": "default"
-        }
-      },
-      "shape": {
-        "lg": {
-          "location": {
-            "x": 1,
-            "y": 1
-          },
-          "size": {
-            "width": 1,
-            "height": 1
-          }
-        },
-        "md": {
-          "location": {
-            "x": 6,
-            "y": 0
-          },
-          "size": {
-            "width": 1,
-            "height": 1
-          }
-        }
-      },
-      "integration": {
-        "type": "transmission",
-        "properties": [
-          {
-            "field": "username",
-            "type": "public",
-            "value": "admin"
-          },
-          {
-            "field": "password",
-            "type": "private",
-            "value": "bbip251293"
-          }
-        ]
-      }
-    },
-    {
-      "id": "b555822a-0fc9-4769-8d46-6c1caad978dc",
-      "name": "Sonarr",
-      "url": "http://sonarr:8989",
-      "appearance": {
-        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/sonarr.svg",
-        "appNameStatus": "normal",
-        "positionAppName": "column",
-        "lineClampAppName": 1,
-        "appNameFontSize": 16
-      },
-      "network": {
-        "enabledStatusChecker": true,
-        "statusCodes": [
-          "200",
-          "301",
-          "302",
-          "304",
-          "307",
-          "308"
-        ]
-      },
-      "behaviour": {
-        "isOpeningNewTab": true,
-        "externalUrl": "http://sonarr.home"
-      },
-      "area": {
-        "type": "wrapper",
-        "properties": {
-          "id": "default"
-        }
-      },
-      "shape": {
-        "lg": {
-          "location": {
-            "x": 5,
-            "y": 0
-          },
-          "size": {
-            "width": 1,
-            "height": 1
-          }
-        },
-        "md": {
-          "location": {
-            "x": 0,
-            "y": 1
-          },
-          "size": {
-            "width": 1,
-            "height": 1
-          }
-        }
-      },
-      "integration": {
-        "type": null,
-        "properties": []
-      }
-    },
-    {
-      "id": "97a9f449-c838-43dd-a3ac-035915bec039",
-      "name": "Lidarr",
-      "url": "http://lidarr.8686",
-      "appearance": {
-        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/lidarr.svg",
-        "appNameStatus": "normal",
-        "positionAppName": "column",
-        "lineClampAppName": 1,
-        "appNameFontSize": 16
-      },
-      "network": {
-        "enabledStatusChecker": true,
-        "statusCodes": [
-          "200",
-          "301",
-          "302",
-          "304",
-          "307",
-          "308"
-        ]
-      },
-      "behaviour": {
-        "isOpeningNewTab": true,
-        "externalUrl": "http://lidarr.home"
-      },
-      "area": {
-        "type": "wrapper",
-        "properties": {
-          "id": "default"
-        }
-      },
-      "shape": {
-        "lg": {
-          "location": {
-            "x": 6,
-            "y": 0
-          },
-          "size": {
-            "width": 1,
-            "height": 1
-          }
-        },
-        "md": {
-          "location": {
-            "x": 1,
-            "y": 1
-          },
-          "size": {
-            "width": 1,
-            "height": 1
-          }
-        }
-      },
-      "integration": {
-        "type": "lidarr",
-        "properties": [
-          {
-            "field": "apiKey",
-            "type": "private",
-            "value": "e1826357765f4160af4471b5726cd81c"
-          }
-        ]
-      }
-    },
-    {
       "id": "bac6164d-060f-439e-9e04-5a5cb16831e0",
       "name": "Portainer",
       "url": "http://portainer:9000",
@@ -747,83 +553,172 @@
         "type": null,
         "properties": []
       }
-    }
-  ],
-  "widgets": [
+    },
     {
-      "id": "7fd1234e-873b-47aa-b191-6aeaedfb4bbb",
-      "type": "calendar",
-      "properties": {
-        "hideWeekDays": true,
-        "showUnmonitored": false,
-        "radarrReleaseType": "inCinemas",
-        "fontSize": "xs"
+      "id": "579319dd-1778-4a23-bfb1-a5eb2229a456",
+      "name": "Transmission",
+      "url": "http://transmission-openvpn:9091",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/transmission.svg",
+        "appNameStatus": "normal",
+        "positionAppName": "column",
+        "lineClampAppName": 1,
+        "appNameFontSize": 16
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": [
+          "200",
+          "301",
+          "302",
+          "304",
+          "307",
+          "308"
+        ]
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://trans.home"
       },
       "area": {
-        "type": "sidebar",
+        "type": "wrapper",
         "properties": {
-          "location": "left"
+          "id": "default"
         }
       },
       "shape": {
-        "sm": {
+        "lg": {
           "location": {
-            "x": 0,
-            "y": 0
+            "x": 1,
+            "y": 1
           },
           "size": {
-            "width": 2,
-            "height": 2
+            "width": 1,
+            "height": 1
           }
         },
         "md": {
           "location": {
-            "x": 0,
-            "y": 3
+            "x": 6,
+            "y": 0
           },
           "size": {
-            "width": 2,
-            "height": 2
-          }
-        },
-        "lg": {
-          "location": {
-            "x": 0,
-            "y": 2
-          },
-          "size": {
-            "width": 2,
-            "height": 2
+            "width": 1,
+            "height": 1
           }
         }
+      },
+      "integration": {
+        "type": "transmission",
+        "properties": [
+          {
+            "field": "username",
+            "type": "public",
+            "value": "admin"
+          },
+          {
+            "field": "password",
+            "type": "private",
+            "value": "bbip251293"
+          }
+        ]
       }
     },
     {
-      "id": "f252768d-9e69-491b-b6b4-8cad04fa30e8",
-      "type": "date",
-      "properties": {
-        "display24HourFormat": false,
-        "dateFormat": "dddd, D MMMM",
-        "enableTimezone": true,
-        "timezoneLocation": {
-          "name": "Tokyo",
-          "latitude": 35.6895,
-          "longitude": 139.69171
-        },
-        "titleState": "both",
-        "timezone": "Europe/Madrid",
-        "customTitle": "Madrid"
+      "id": "97a9f449-c838-43dd-a3ac-035915bec039",
+      "name": "Lidarr",
+      "url": "http://lidarr:8686",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/lidarr.svg",
+        "appNameStatus": "normal",
+        "positionAppName": "column",
+        "lineClampAppName": 1,
+        "appNameFontSize": 16
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": [
+          "200",
+          "301",
+          "302",
+          "304",
+          "307",
+          "308"
+        ]
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://lidarr.home"
       },
       "area": {
-        "type": "sidebar",
+        "type": "wrapper",
         "properties": {
-          "location": "left"
+          "id": "default"
         }
       },
       "shape": {
-        "sm": {
+        "lg": {
           "location": {
-            "x": 0,
+            "x": 6,
+            "y": 0
+          },
+          "size": {
+            "width": 1,
+            "height": 1
+          }
+        },
+        "md": {
+          "location": {
+            "x": 1,
+            "y": 1
+          },
+          "size": {
+            "width": 1,
+            "height": 1
+          }
+        }
+      },
+      "integration": {
+        "type": null,
+        "properties": []
+      }
+    },
+    {
+      "id": "b555822a-0fc9-4769-8d46-6c1caad978dc",
+      "name": "Sonarr",
+      "url": "http://sonarr:8989",
+      "appearance": {
+        "iconUrl": "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/svg/sonarr.svg",
+        "appNameStatus": "normal",
+        "positionAppName": "column",
+        "lineClampAppName": 1,
+        "appNameFontSize": 16
+      },
+      "network": {
+        "enabledStatusChecker": true,
+        "statusCodes": [
+          "200",
+          "301",
+          "302",
+          "304",
+          "307",
+          "308"
+        ]
+      },
+      "behaviour": {
+        "isOpeningNewTab": true,
+        "externalUrl": "http://sonarr.home"
+      },
+      "area": {
+        "type": "wrapper",
+        "properties": {
+          "id": "default"
+        }
+      },
+      "shape": {
+        "lg": {
+          "location": {
+            "x": 5,
             "y": 0
           },
           "size": {
@@ -834,25 +729,21 @@
         "md": {
           "location": {
             "x": 0,
-            "y": 0
+            "y": 1
           },
           "size": {
-            "width": 2,
-            "height": 1
-          }
-        },
-        "lg": {
-          "location": {
-            "x": 0,
-            "y": 0
-          },
-          "size": {
-            "width": 2,
+            "width": 1,
             "height": 1
           }
         }
+      },
+      "integration": {
+        "type": null,
+        "properties": []
       }
-    },
+    }
+  ],
+  "widgets": [
     {
       "id": "e3004052-6b83-480e-b458-56e8ccdca5f0",
       "type": "weather",
@@ -943,6 +834,109 @@
           "size": {
             "width": 2,
             "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "7fd1234e-873b-47aa-b191-6aeaedfb4bbb",
+      "type": "calendar",
+      "properties": {
+        "hideWeekDays": true,
+        "showUnmonitored": false,
+        "radarrReleaseType": "inCinemas",
+        "fontSize": "xs"
+      },
+      "area": {
+        "type": "sidebar",
+        "properties": {
+          "location": "left"
+        }
+      },
+      "shape": {
+        "sm": {
+          "location": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        },
+        "md": {
+          "location": {
+            "x": 0,
+            "y": 4
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        },
+        "lg": {
+          "location": {
+            "x": 0,
+            "y": 2
+          },
+          "size": {
+            "width": 2,
+            "height": 2
+          }
+        }
+      }
+    },
+    {
+      "id": "f252768d-9e69-491b-b6b4-8cad04fa30e8",
+      "type": "date",
+      "properties": {
+        "display24HourFormat": false,
+        "dateFormat": "dddd, D MMMM",
+        "enableTimezone": true,
+        "timezoneLocation": {
+          "name": "Tokyo",
+          "latitude": 35.6895,
+          "longitude": 139.69171
+        },
+        "titleState": "both",
+        "timezone": "Europe/Madrid",
+        "customTitle": "Madrid"
+      },
+      "area": {
+        "type": "sidebar",
+        "properties": {
+          "location": "left"
+        }
+      },
+      "shape": {
+        "sm": {
+          "location": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "width": 1,
+            "height": 1
+          }
+        },
+        "md": {
+          "location": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "width": 2,
+            "height": 1
+          }
+        },
+        "lg": {
+          "location": {
+            "x": 0,
+            "y": 0
+          },
+          "size": {
+            "width": 2,
+            "height": 1
           }
         }
       }
