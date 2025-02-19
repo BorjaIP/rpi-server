@@ -150,7 +150,7 @@ services:
 
   # Documentation https://github.com/Taxel/PlexTraktSync
   plextraktsync:
-    image: ghcr.io/taxel/plextraktsync:0.25.16
+    image: ghcr.io/taxel/plextraktsync:0.29.7
     container_name: plextraktsync
     restart: always
     depends_on: [plex]
@@ -173,52 +173,52 @@ services:
       start_period: 30s
       retries: 3
 
-  wireguard:
-    image: linuxserver/wireguard:arm64v8-1.0.20210914
-    container_name: wireguard
-    hostname: wireguard
-    restart: always
-    depends_on: [pihole]
-    ports:
-      - 51820:51820/udp         # Forward port 51820/udp on your router to the server IP
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-      - SERVERURL=${DOMAIN}
-      - SERVERPORT=51820
-      - PEERS=2                 # How many peers to generate for you (clients)
-      - PEERDNS=192.168.1.200   # Optional, put pihole if you have static IP
-      - INTERNAL_SUBNET=10.10.10.0
-      - ALLOWEDIPS=192.168.1.0/24
-    extra_hosts: *rpi-server
-    networks:
-      rpi-net:
-      rpi-lan:
-        ipv4_address: 192.168.1.230
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    dns:
-      - 192.168.1.200           # Put pihole if you have static IP
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-    volumes:
-      - ./wireguard:/config
-      - /lib/modules:/lib/modules
-    healthcheck:
-      test: curl -o /dev/null -m 3 -fs https://1.1.1.1/dns-query?ct=application/dns-json&name=www.google.com&type=AAAA || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
+  # wireguard:
+  #   image: linuxserver/wireguard:arm64v8-1.0.20210914
+  #   container_name: wireguard
+  #   hostname: wireguard
+  #   restart: always
+  #   depends_on: [pihole]
+  #   ports:
+  #     - 51820:51820/udp         # Forward port 51820/udp on your router to the server IP
+  #   environment:
+  #     - PUID=${UID}
+  #     - PGID=${UID}
+  #     - TZ=${TZ}
+  #     - SERVERURL=${DOMAIN}
+  #     - SERVERPORT=51820
+  #     - PEERS=2                 # How many peers to generate for you (clients)
+  #     - PEERDNS=192.168.1.200   # Optional, put pihole if you have static IP
+  #     - INTERNAL_SUBNET=10.10.10.0
+  #     - ALLOWEDIPS=192.168.1.0/24
+  #   extra_hosts: *rpi-server
+  #   networks:
+  #     rpi-net:
+  #     rpi-lan:
+  #       ipv4_address: 192.168.1.230
+  #   cap_add:
+  #     - NET_ADMIN
+  #     - SYS_MODULE
+  #   dns:
+  #     - 192.168.1.200           # Put pihole if you have static IP
+  #   sysctls:
+  #     - net.ipv4.ip_forward=1
+  #     - net.ipv4.conf.all.src_valid_mark=1
+  #   volumes:
+  #     - ./wireguard:/config
+  #     - /lib/modules:/lib/modules
+  #   healthcheck:
+  #     test: curl -o /dev/null -m 3 -fs https://1.1.1.1/dns-query?ct=application/dns-json&name=www.google.com&type=AAAA || exit 1
+  #     interval: 30s
+  #     timeout: 10s
+  #     start_period: 30s
+  #     retries: 3
 
   # Arr stack
   # Documentation: https://trash-guides.info/
   # Scripts: https://github.com/RandomNinjaAtk/arr-scripts
   sonarr:
-    image: lscr.io/linuxserver/sonarr:arm64v8-3.0.10
+    image: lscr.io/linuxserver/sonarr:arm64v8-4.0.13
     container_name: sonarr
     hostname: sonarr
     restart: always
@@ -243,7 +243,7 @@ services:
       retries: 3
 
   radarr:
-    image: lscr.io/linuxserver/radarr:arm64v8-4.3.2
+    image: lscr.io/linuxserver/radarr:arm64v8-5.18.4
     container_name: radarr
     hostname: radarr
     restart: always
@@ -268,7 +268,7 @@ services:
       retries: 3
 
   lidarr:
-    image: lscr.io/linuxserver/lidarr:arm64v8-2.1.7
+    image: lscr.io/linuxserver/lidarr:arm64v8-2.9.6
     container_name: lidarr
     hostname: lidarr
     restart: always
@@ -295,7 +295,7 @@ services:
       retries: 3
 
   prowlarr:
-    image: lscr.io/linuxserver/prowlarr:arm64v8-1.13.3
+    image: lscr.io/linuxserver/prowlarr:arm64v8-1.30.2
     container_name: prowlarr
     restart: always
     depends_on: [transmission-openvpn]
@@ -312,6 +312,15 @@ services:
       timeout: 10s
       start_period: 30s
       retries: 3
+
+  # Restarter for prowlarr
+  restarter:
+    image: docker:cli
+    container_name: restarter
+    restart: always
+    volumes: ["/var/run/docker.sock:/var/run/docker.sock"]
+    command: ["/bin/sh", "-c", "while true; do sleep 1d; docker restart prowlarr; done"]
+    restart: unless-stopped
 
   overseerr:
     image: lscr.io/linuxserver/overseerr:arm64v8-1.33.2
@@ -338,33 +347,8 @@ services:
       start_period: 30s
       retries: 3
 
-  navidrome:
-    image: deluan/navidrome:pr-2840
-    container_name: navidrome
-    hostname: navidrome
-    restart: always
-    user: ${UID}:${UID}
-    ports:
-      - 4533:4533
-    environment:
-      - ND_SCANSCHEDULE=@every 1m
-      - ND_LOGLEVEL=info  
-      - ND_SESSIONTIMEOUT=24h
-      - ND_DEFAULTTHEME=Spotify-ish
-      - ND_SPOTIFY_ID=${ND_SPOTIFY_ID}
-      - ND_SPOTIFY_SECRET=${ND_SPOTIFY_SECRET}
-      - ND_LASTFM_ENABLED=true
-      - ND_LASTFM_APIKEY=${ND_LASTFM_APIKEY}
-      - ND_LASTFM_SECRET=${ND_LASTFM_SECRET}
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-    volumes:
-      - ./navidrome:/data
-      - ${STORAGE}/Media/Music:/music:ro
-
   homarr:
-    image: ghcr.io/ajnart/homarr:0.14.6
+    image: ghcr.io/ajnart/homarr:0.15.10
     container_name: homarr
     hostname: homarr
     restart: always
@@ -384,12 +368,81 @@ services:
       - ./homarr/icons:/app/public/icons
       - ./homarr/data:/data
     healthcheck:
-      test: curl -fs http://localhost:7575 || exit 1
+      test: wget --no-check-certificate --no-verbose --tries=3 --spider http://localhost:7575 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 30s
       retries: 3
 
+  # Music stack
+  # Documentation: https://github.com/navidrome/navidrome
+  # Sync popularity: https://github.com/krestaino/sptnr
+  # PLaylist: https://github.com/blastbeng/spotisub/
+  # navidrome:
+  #   image: deluan/navidrome:pr-2840
+  #   container_name: navidrome
+  #   hostname: navidrome
+  #   restart: always
+  #   user: ${UID}:${UID}
+  #   ports:
+  #     - 4533:4533
+  #   environment:
+  #     - ND_SCANSCHEDULE=@every 1m
+  #     - ND_LOGLEVEL=info  
+  #     - ND_SESSIONTIMEOUT=24h
+  #     - ND_DEFAULTTHEME=Spotify-ish
+  #     - ND_SPOTIFY_ID=${ND_SPOTIFY_ID}
+  #     - ND_SPOTIFY_SECRET=${ND_SPOTIFY_SECRET}
+  #     - ND_LASTFM_ENABLED=true
+  #     - ND_LASTFM_APIKEY=${ND_LASTFM_APIKEY}
+  #     - ND_LASTFM_SECRET=${ND_LASTFM_SECRET}
+  #   extra_hosts: *rpi-server
+  #   networks:
+  #     - rpi-net
+  #   volumes:
+  #     - ./navidrome:/data
+  #     - ${STORAGE}/Media/Music:/music:ro
+
+  # spotisub:
+  #   container_name: spotisub
+  #   environment:
+  #       - SPOTIPY_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  #       - SPOTIPY_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  #       - SPOTIPY_REDIRECT_URI=http://127.0.0.1:8080/
+  #       - SUBSONIC_API_BASE_URL=/music
+  #       - SUBSONIC_API_HOST=http://navidrome
+  #       - SUBSONIC_API_PORT=4533
+  #       - SUBSONIC_API_USER=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  #       - SUBSONIC_API_PASS=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  #       - ITEMS_PER_PLAYLIST=100
+  #       - NUM_USER_PLAYLISTS=5
+  #       - ARTIST_GEN_SCHED=2
+  #       - RECOMEND_GEN_SCHED=8
+  #       - PLAYLIST_GEN_SCHED=6
+  #       - SAVED_GEN_SCHED=24
+  #       - SCHEDULER_ENABLED=1
+  #       - SPOTDL_ENABLED=0
+  #       - SPOTDL_FORMAT="/music/{artist}/{artists} - {album} ({year}) - {track-number} - {title}.{output-ext}"
+  #       - LOG_LEVEL=20
+  #   image: "blastbeng/spotisub:latest"
+  #   build:
+  #     context: ./spotisub
+  #     dockerfile: Dockerfile
+  #   restart: always
+  #   networks:
+  #       - ndspotisubnet
+  #   volumes:
+  #       - "./cache:/home/user/spotisub/cache"
+  #   #    - "/path/to/your/music:/music" !!! REQUIRED IF SPOTDL IS ENABLED !!!
+  #   ports:
+  #       - 5183:5183
+  #   healthcheck:
+  #       test: curl -s http://127.0.0.1:5183/utils/healthcheck | grep -q 'Ok!' || exit 1
+  #       interval: 30s
+  #       retries: 20
+  #       start_period: 30s
+
+  # Others
   nginx:
     image: jc21/nginx-proxy-manager:2.9.15
     container_name: nginx
@@ -417,7 +470,7 @@ services:
       retries: 3
   
   portainer-ce:
-    image: portainer/portainer-ce:linux-arm64-2.17.1
+    image: portainer/portainer-ce:2.26.1-linux-arm64
     container_name: portainer
     restart: always
     ports:
@@ -431,7 +484,13 @@ services:
       - rpi-net
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./portainer/data:/data 
+      - ./portainer/data:/data
+    healthcheck:
+      test: nc -z -v localhost 9000 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   samba:
     image: dperson/samba:aarch64
