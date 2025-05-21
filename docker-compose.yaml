@@ -64,6 +64,24 @@ services:
       - ./pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/
 
 
+  glances:
+    image: nicolargo/glances:4.3.1-full
+    container_name: glances
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    privileged: true
+    environment:
+      - GLANCES_OPT=-w
+    ports:
+      - 61208-61209:61208-61209
+    networks:
+      rpi-net:
+    pid: host
+    volumes:
+      - /etc/os-release:/etc/os-release:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
   netalertx:
     image: ghcr.io/jokob-sk/netalertx:25.4.14
     container_name: netalertx
