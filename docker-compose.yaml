@@ -21,66 +21,8 @@ x-extra_hosts:
   - "router.home:192.168.1.1"
   # Change this to IP of your RPi
   - "server.home:192.168.1.100"
-  - "plex.home:192.168.1.210"
 
 services:
-
-  # To run this container, you would need an openvpn provider. I use PIA and hence in here that is used as an
-  # example. Please look at the documentation to understand each of the config variables.
-  # Documentation: https://haugene.github.io/docker-transmission-openvpn/
-  # Transmission: https://github.com/transmission/transmission/wiki/Editing-Configuration-Files
-  transmission-openvpn:
-    image: haugene/transmission-openvpn:3.0.2-arm64
-    container_name: transmission-openvpn
-    hostname: transmission
-    restart: always
-    ports:
-      - 9091:9091
-      - 9696:9696  # This is Prowlarr Port – managed by VPN Service Network
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-      - OPENVPN_PROVIDER=${OPENVPN_PROVIDER}
-      - OPENVPN_CONFIG=${OPENVPN_CONFIG}
-      - OPENVPN_USERNAME=${OPENVPN_USERNAME}
-      - OPENVPN_PASSWORD=${OPENVPN_PASSWORD}
-      - OPENVPN_OPTS=--mute-replay-warnings --inactive 3600 --ping 10 --ping-exit 60
-      - PIA_OPENVPN_CONFIG_BUNDLE=openvpn
-      - LOCAL_NETWORK=${LOCAL_NETWORK}
-      - DISABLE_PORT_UPDATER=${DISABLE_PORT_UPDATER}
-      - TRANSMISSION_ALT_SPEED_DOWN=${TRANSMISSION_ALT_SPEED_DOWN}
-      - TRANSMISSION_ALT_SPEED_TIME_DAY=${TRANSMISSION_ALT_SPEED_TIME_DAY}
-      - TRANSMISSION_ALT_SPEED_TIME_ENABLED=${TRANSMISSION_ALT_SPEED_TIME_ENABLED}
-      - TRANSMISSION_ALT_SPEED_UP=${TRANSMISSION_ALT_SPEED_UP}
-      - TRANSMISSION_BLOCKLIST_ENABLED=${TRANSMISSION_BLOCKLIST_ENABLED}
-      - TRANSMISSION_BLOCKLIST_URL=${TRANSMISSION_BLOCKLIST_URL}
-      - TRANSMISSION_DOWNLOAD_DIR=${TRANSMISSION_DOWNLOAD_DIR}
-      - TRANSMISSION_IDLE_SEEDING_LIMIT=${TRANSMISSION_IDLE_SEEDING_LIMIT}
-      - TRANSMISSION_IDLE_SEEDING_LIMIT_ENABLED=${TRANSMISSION_IDLE_SEEDING_LIMIT_ENABLED}
-      - TRANSMISSION_INCOMPLETE_DIR_ENABLED=${TRANSMISSION_INCOMPLETE_DIR_ENABLED}
-      - TRANSMISSION_PEER_PORT_RANDOM_LOW=${TRANSMISSION_PEER_PORT_RANDOM_LOW}
-      - TRANSMISSION_RATIO_LIMIT_ENABLED=${TRANSMISSION_RATIO_LIMIT_ENABLED}
-      - TRANSMISSION_RPC_AUTHENTICATION_REQUIRED=${TRANSMISSION_RPC_AUTHENTICATION_REQUIRED}
-      - TRANSMISSION_RPC_WHITELIST=${TRANSMISSION_RPC_WHITELIST}
-      - TRANSMISSION_RPC_WHITELIST_ENABLED=${TRANSMISSION_RPC_WHITELIST_ENABLED}
-      - TRANSMISSION_RPC_USERNAME=${TRANSMISSION_RPC_USERNAME}
-      - TRANSMISSION_RPC_PASSWORD=${TRANSMISSION_RPC_PASSWORD}
-      - TRANSMISSION_TRASH_ORIGINAL_TORRENT_FILES=${TRANSMISSION_TRASH_ORIGINAL_TORRENT_FILES}
-      - TRANSMISSION_UMASK=${TRANSMISSION_UMASK}
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-    privileged: true
-    cap_add:
-      - NET_ADMIN
-    devices:
-      - /dev/net/tun # This creates a tunnel for Transmission
-    volumes:
-      - ${STORAGE}/Transmission/complete:/data/complete
-      - ${STORAGE}/Transmission/incomplete:/data/incomplete
-      - ./transmission:/data/transmission-home
-  
   # Documentation: https://github.com/chriscrowe/docker-pihole-unbound/tree/main/one-container
   pihole:
     image: cbcrowe/pihole-unbound:2023.11.0
@@ -121,57 +63,30 @@ services:
       - ./pihole/etc-pihole/:/etc/pihole/
       - ./pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/
 
-  plex:
-    image: lscr.io/linuxserver/plex:arm64v8-1.32.8
-    container_name: plex
-    hostname: plex
+
+  netalertx:
+    image: ghcr.io/jokob-sk/netalertx:25.4.14
+    container_name: netalertx
+    hostname: netalertx
     restart: always
+    privileged: true
     environment:
       - PUID=${UID}
-      - PGID=${UID}
+      - PGID=${GID}
       - TZ=${TZ}
-      - VERSION=docker
-      - PLEX_CLAIM=${PLEX_CLAIM}
-    extra_hosts: *rpi-server
-    networks:
-      rpi-net:
-      rpi-lan:
-        ipv4_address: 192.168.1.210
+    network_mode: host
     volumes:
-      - ./plex:/config
-      - ${STORAGE}/Media/Series:/tv
-      - ${STORAGE}/Media/Movies:/movies
+      - ./netalertx/config:/app/config
+      - ./netalertx/db:/app/db
+      - type: tmpfs
+        target: /app/api
     healthcheck:
-      test: wget -nv -t 1 --spider --spider http://plex.home:32400/?X-Plex-Token=${PLEX_TOKEN} > /dev/null 2>&1 || exit 1
+      test: curl -fs http://localhost:20211 || exit 1
       interval: 30s
       timeout: 10s
       start_period: 30s
       retries: 3
 
-  # Documentation https://github.com/Taxel/PlexTraktSync
-  plextraktsync:
-    image: ghcr.io/taxel/plextraktsync:0.29.7
-    container_name: plextraktsync
-    restart: always
-    depends_on: [plex]
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-    extra_hosts: *rpi-server
-    networks:
-      rpi-net:
-      rpi-lan:
-        ipv4_address: 192.168.1.220
-    command: watch
-    volumes:
-      - ./plextraktsync:/app/config
-    healthcheck:
-      test: wget -nv -t 1 --spider http://plex.home:32400/?X-Plex-Token=${PLEX_TOKEN} > /dev/null 2>&1 || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
 
   # wireguard:
   #   image: linuxserver/wireguard:arm64v8-1.0.20210914
@@ -213,166 +128,6 @@ services:
   #     timeout: 10s
   #     start_period: 30s
   #     retries: 3
-
-  # Arr stack
-  # Documentation: https://trash-guides.info/
-  # Scripts: https://github.com/RandomNinjaAtk/arr-scripts
-  sonarr:
-    image: lscr.io/linuxserver/sonarr:arm64v8-4.0.13
-    container_name: sonarr
-    hostname: sonarr
-    restart: always
-    ports:
-      - 8989:8989
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-    volumes:
-      - ./sonarr:/config
-      - ${STORAGE}/Transmission/complete:/downloads
-      - ${STORAGE}/Media/Series:/tv
-    healthcheck:
-      test: curl -fs http://localhost:8989 || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
-
-  radarr:
-    image: lscr.io/linuxserver/radarr:arm64v8-5.18.4
-    container_name: radarr
-    hostname: radarr
-    restart: always
-    ports:
-      - 7878:7878
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-    volumes:
-      - ./radarr:/config
-      - ${STORAGE}/Transmission/complete:/downloads
-      - ${STORAGE}/Media/Movies:/movies
-    healthcheck:
-      test: curl -fs http://localhost:7878 || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
-
-  lidarr:
-    image: lscr.io/linuxserver/lidarr:arm64v8-2.9.6
-    container_name: lidarr
-    hostname: lidarr
-    restart: always
-    ports:
-      - 8686:8686
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-    volumes:
-      - ./lidarr:/config
-      - ./services:/custom-services.d
-      - ./scripts/lidarr_init.sh:/custom-cont-init.d/lidarr_init.sh
-      - ${STORAGE}/Transmission/complete:/downloads
-      - ${STORAGE}/Media/Music:/music
-    healthcheck:
-      test: curl -fs http://localhost:8686 || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
-
-  prowlarr:
-    image: lscr.io/linuxserver/prowlarr:arm64v8-1.30.2
-    container_name: prowlarr
-    restart: always
-    depends_on: [transmission-openvpn]
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-    network_mode: "service:transmission-openvpn"
-    volumes:
-      - ./prowlarr:/config
-    healthcheck:
-      test: curl -fs http://localhost:9696 || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
-
-  # Restarter for prowlarr
-  restarter:
-    image: docker:cli
-    container_name: restarter
-    restart: always
-    volumes: ["/var/run/docker.sock:/var/run/docker.sock"]
-    command: ["/bin/sh", "-c", "while true; do sleep 1d; docker restart prowlarr; done"]
-    restart: unless-stopped
-
-  overseerr:
-    image: lscr.io/linuxserver/overseerr:arm64v8-1.33.2
-    container_name: overseerr
-    hostname: overseerr
-    restart: always
-    ports:
-      - 5055:5055
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-    extra_hosts: *rpi-server
-    networks:
-      rpi-net:
-      rpi-lan:
-        ipv4_address: 192.168.1.240
-    volumes:
-      - ./overseerr:/config
-    healthcheck:
-      test: curl -fs http://localhost:5055 || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
-
-  homarr:
-    image: ghcr.io/ajnart/homarr:0.15.10
-    container_name: homarr
-    hostname: homarr
-    restart: always
-    ports:
-      - 7575:7575
-    environment:
-      - PUID=${UID}
-      - PGID=${UID}
-      - TZ=${TZ}
-      - DEFAULT_COLOR_SCHEME=dark
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./homarr/configs:/app/data/configs
-      - ./homarr/icons:/app/public/icons
-      - ./homarr/data:/data
-    healthcheck:
-      test: wget --no-check-certificate --no-verbose --tries=3 --spider http://localhost:7575 || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
 
   # Music stack
   # Documentation: https://github.com/navidrome/navidrome
@@ -443,31 +198,31 @@ services:
   #       start_period: 30s
 
   # Others
-  nginx:
-    image: jc21/nginx-proxy-manager:2.9.15
-    container_name: nginx
-    hostname: nginx
-    restart: always
-    ports:
-      - 80:80
-      - 81:81
-      - 443:443
-    environment:
-      - UID=${UID}
-      - GID=${GID}
-      - DB_SQLITE_FILE=/data/database.sqlite
-    networks:
-      - rpi-net
-    volumes:
-      - ./nginx/config/config.json:/app/config/production.json
-      - ./nginx/data:/data
-      - ./nginx/letsencrypt:/etc/letsencrypt
-    healthcheck:
-      test: curl -fs http://localhost:81 || exit 1
-      interval: 30s
-      timeout: 10s
-      start_period: 30s
-      retries: 3
+  # nginx:
+  #   image: jc21/nginx-proxy-manager:2.9.15
+  #   container_name: nginx
+  #   hostname: nginx
+  #   restart: always
+  #   ports:
+  #     - 80:80
+  #     - 81:81
+  #     - 443:443
+  #   environment:
+  #     - UID=${UID}
+  #     - GID=${GID}
+  #     - DB_SQLITE_FILE=/data/database.sqlite
+  #   networks:
+  #     - rpi-net
+  #   volumes:
+  #     - ./nginx/config/config.json:/app/config/production.json
+  #     - ./nginx/data:/data
+  #     - ./nginx/letsencrypt:/etc/letsencrypt
+  #   healthcheck:
+  #     test: curl -fs http://localhost:81 || exit 1
+  #     interval: 30s
+  #     timeout: 10s
+  #     start_period: 30s
+  #     retries: 3
   
   portainer-ce:
     image: portainer/portainer-ce:2.26.1-linux-arm64
@@ -492,23 +247,6 @@ services:
       retries: 3
       start_period: 30s
 
-  samba:
-    image: dperson/samba:aarch64
-    container_name: samba
-    restart: always
-    ports:
-      - 139:139
-      - 445:445
-    extra_hosts: *rpi-server
-    networks:
-      - rpi-net
-    command: '-u ${SAMBA_USER};${SAMBA_PASS} -s "Drive;/Drive;yes;no"'
-    stdin_open: true
-    tty: true
-    volumes:
-      - /usr/share/zoneinfo/Europe/Madrid:/etc/localtime
-      - /mnt/storage:/Drive
-
   cloudflare:
     image: cloudflare/cloudflared:2024.2.0-arm64
     container_name: cloudflare
@@ -520,53 +258,6 @@ services:
     command: tunnel --no-autoupdate run
     networks:
       - rpi-net
-
-  # homer:
-  #   image: b4bz/homer:v23.02.2
-  #   container_name: homer
-  #   restart: always
-  #   user: "${UID}:${GID}"
-  #   ports:
-  #     - 8080:8080
-  #   environment:
-  #     - UID=${UID}
-  #     - GID=${GID}
-  #     - TZ=${TZ}
-  #     - PASSWORD=${PASSWORD}
-  #   extra_hosts: *rpi-server
-  #   networks:
-  #     - rpi-net
-  #   volumes:
-  #     - ./homer/icons:/www/assets/icons
-  #     - ./homer/config.yml:/www/assets/config.yml
-  #   healthcheck:
-  #     test: wget -nv -t 1 --spider --spider http://localhost:8080 || exit 1
-  #     interval: 30s
-  #     timeout: 10s
-  #     start_period: 30s
-  #     retries: 3
-
-  # duckdns:
-  #   image: lscr.io/linuxserver/duckdns:arm64v8-version-ab5e2d0e
-  #   container_name: duckdns
-  #   restart: always
-  #   environment:
-  #     - PUID=${UID}
-  #     - PGID=${GID}
-  #     - TZ=${TZ}
-  #     - SUBDOMAINS=${DOMAIN}
-  #     - TOKEN=${TOKEN}
-  #     - LOG_FILE=false
-  #   networks:
-  #     - rpi-net
-  #   volumes:
-  #     - ./duckdns:/config
-  #   healthcheck:
-  #     test: curl -o /dev/null -m 3 -fs https://1.1.1.1/dns-query?ct=application/dns-json&name=www.google.com&type=AAAA || exit 1
-  #     interval: 30s
-  #     timeout: 10s
-  #     start_period: 30s
-  #     retries: 3
 
   ## Monitoring using cAdvisor, Node Exporter, Prometheus and Grafana 
   ## Documentation: https://github.com/oijkn/Docker-Raspberry-PI-Monitoring
