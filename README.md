@@ -1,12 +1,12 @@
-# Raspberry-Server
+# 🚀 Raspberry-Server
 
-### 1. Download Raspbian
+### 🐧 1. Download Raspbian 
 
    * [Raspbian](https://www.raspberrypi.org/downloads/raspberry-pi-os/)
    * [Raspberry Pi Imager](https://www.raspberrypi.com/software/) or [Etcher](https://etcher.io/)
    * Flash SD with the img (use lite for non graphical env)
   
-### 2. Install all and configure the Raspberry
+### ⚙️ 2. Install all and configure the Raspberry
 
 > __NOTE__ : Activate [SSH](https://www.raspberrypi.org/documentation/remote-access/ssh/) in the Raspberry
 
@@ -99,7 +99,7 @@ static domain_name_servers=<DNSIP>
 sudo reboot
 ```
 
-### 3. Install packages
+### 📦 3. Install packages
 
 ```bash
 sudo apt-get update && sudo apt-get install -y \
@@ -114,7 +114,7 @@ sudo apt-get update && sudo apt-get install -y \
      ntfs-3g
 ```
 
-### 4. Install GPG signatures and Docker repo
+### 🔐 4. Install GPG signatures and Docker repo
 
 ```bash
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
@@ -124,7 +124,7 @@ curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
 sudo apt-key fingerprint 0EBFCD88
 ```
 
-### 5. Add Docker repo
+### 🐋 5. Add Docker repo
 
 Docker for armhf --> 32bit
 
@@ -142,13 +142,13 @@ echo "deb [arch=arm64] https://download.docker.com/linux/debian \
     sudo tee /etc/apt/sources.list.d/docker.list
 ```
 
-### 6. Install Docker CE
+### 🐋 6. Install Docker CE
 
 ```bash
 sudo apt-get update && sudo apt-get install -y --no-install-recommends docker-ce docker-compose
 ```
 
-### 7. Add your user to Docker group for avoid call Docker with sudo
+### 👥 7. Add your user to Docker group for avoid call Docker with sudo
 
 ```bash
 sudo usermod -aG docker $USER
@@ -162,7 +162,7 @@ sudo vim /etc/default/docker
 export DOCKER_TMPDIR="/mnt/storage/docker-tmp"
 ```
 
-### 8. Mount NTFS disk
+### 💾 8. Mount NTFS disk
 
 List all the devices.
 
@@ -190,7 +190,7 @@ mount -a
 sudo reboot
 ```
 
-### 9. Start `rpi-server`
+### 🚀 9. Start `rpi-server`
 
 ```bash
 cd rpi-server
@@ -203,30 +203,13 @@ vim .env
 docker-compose up -d
 ```
 
-## Testing
+## 🧪 Testing
 
 - For testing Transmission with OpenVPN add this torrent from [TorGuard](https://torguard.net/checkmytorrentipaddress.php?hash=f1f5bda133bdbb4743773cc8548cbaee1fbff88a).
 
-# Content
+# 📚 Content
 
- * [Transmission](https://github.com/haugene/docker-transmission-openvpn)
- * [OpenVPN](https://github.com/OpenVPN/openvpn)
  * [Pihole](https://github.com/pi-hole/docker-pi-hole)
- * [Unbound](https://github.com/MatthewVance/unbound-docker-rpi)
- * [Wireguard](https://github.com/linuxserver/docker-wireguard)
- * [Plex](https://github.com/jaymoulin/docker-plex)
- * [Sonarr](https://github.com/linuxserver/docker-sonarr)
- * [Radarr](https://github.com/linuxserver/docker-radarr)
- * [Jackett](https://github.com/linuxserver/docker-jackett)
- * [Homer](https://github.com/bastienwirtz/homer)
- * [Nginx](https://github.com/NginxProxyManager/nginx-proxy-manager)
+ * [Glances](https://github.com/nicolargo/glances)
+ * [NextAlertX](https://github.com/jokob-sk/NetAlertX)
  * [Portainer](https://github.com/portainer/portainer)
- * [Samba](https://github.com/dperson/samba)
- * [PlexTraktSync](https://github.com/Taxel/PlexTraktSync)
-
-# Contributions
-
-Repository based on :
-
-* [pablokbs](https://github.com/pablokbs/plex-rpi)
-* [IoTstack](https://github.com/SensorsIot/IOTstack)
